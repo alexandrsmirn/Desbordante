@@ -28,10 +28,7 @@ std::unordered_set<Vertical> LatticeTraversal::findLHSs() {
 
     std::stack<Vertical> seeds;
 
-    /* Temporary fix. I think `getOrderHighDistinctCount` should return vector of
-     * unsigned integers since `order` sould be something non-negative.
-     */
-    for (unsigned partitionIndex : columnOrder.getOrderHighDistinctCount(Vertical(*rhs).invert())) {
+    for (unsigned int partitionIndex : columnOrder.getOrderHighDistinctCount(Vertical(*rhs).invert())) {
         if (partitionIndex != rhs->getIndex()) {
             seeds.push(Vertical(*schema->getColumn(partitionIndex)));
         }

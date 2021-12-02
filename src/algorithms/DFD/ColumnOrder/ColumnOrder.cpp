@@ -11,31 +11,31 @@ ColumnOrder::ColumnOrder(ColumnLayoutRelationData const* const relationData)
         partitions.emplace(columnData.getPositionListIndex(), relationData->getNumRows(), columnData.getColumn()->getIndex());
     }
 
-    int orderIndex = 0;
+    unsigned int orderIndex = 0;
     for (auto const& partition : partitions) {
         order[orderIndex++] = partition.getColumnIndex();
     }
 }
 
-std::vector<int> ColumnOrder::getOrderHighDistinctCount(const Vertical &columns) const {
-    std::vector<int> orderForColumns(columns.getArity());
+std::vector<unsigned int> ColumnOrder::getOrderHighDistinctCount(Vertical const& columns) const {
+    std::vector<unsigned int> orderForColumns(columns.getArity());
 
-    int currentOrderIndex = 0;
-    for (int column_index : order) {
-        if (columns.getColumnIndices()[column_index]) {
-            orderForColumns[currentOrderIndex++] = column_index;
+    unsigned int currentOrderIndex = 0;
+    for (auto columnIndex : order) {
+        if (columns.getColumnIndices()[columnIndex]) {
+            orderForColumns[currentOrderIndex++] = columnIndex;
         }
     }
 
     return orderForColumns;
 }
 
-std::vector<int> ColumnOrder::getOrderLowDistinctCount(const Vertical &columns) const {
-    std::vector<int> orderForColumns(columns.getArity());
+std::vector<unsigned int> ColumnOrder::getOrderLowDistinctCount(Vertical const& columns) const {
+    std::vector<unsigned int> orderForColumns(columns.getArity());
 
     assert(!order.empty());
-    int currentOrderIndex = 0;
-    for (int i = this->order.size() - 1; i >= 0; --i) {
+    unsigned int currentOrderIndex = 0;
+    for (unsigned int i = this->order.size() - 1; i >= 0; --i) {
         if (columns.getColumnIndices()[order[i]]) {
             orderForColumns[currentOrderIndex++] = this->order[i];
         }
