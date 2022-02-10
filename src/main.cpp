@@ -17,6 +17,7 @@
 #include "algorithms/Fd_mine.h"
 #include "algorithms/FastFDs.h"
 #include "algorithms/depminer/Depminer.h"
+#include "algorithms/associative-rules/EnumerationTree.h"
 
 namespace po = boost::program_options;
 
@@ -24,7 +25,7 @@ INITIALIZE_EASYLOGGINGPP
 
 bool checkOptions(std::string const& alg, double error) {
     if (alg != "pyro" && alg != "tane" && alg != "fastfds" && alg != "fdmine" && alg != "dfd" && alg != "depminer"
-        && alg != "fdep") {
+        && alg != "fdep" && alg != "apriori") {
         std::cout << "ERROR: no matching algorithm. Available algorithms are:\n\tpyro\n\ttane.\n" << std::endl;
         return false;
     }
@@ -35,7 +36,7 @@ bool checkOptions(std::string const& alg, double error) {
 }
 
 int main(int argc, char const *argv[]) {
-    std::string alg;
+    std::string alg = "apriori";
     std::string dataset;
     char separator = ',';
     bool hasHeader = true;
@@ -43,6 +44,9 @@ int main(int argc, char const *argv[]) {
     double error = 0.0;
     unsigned int maxLhs = -1;
     unsigned int parallelism = 0;
+
+    double minconf = 0;
+    double minsup = 0;
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -55,7 +59,8 @@ int main(int argc, char const *argv[]) {
             ("error", po::value<double>(&error), "error for AFD algorithms. Default 0.01")
             ("maxLHS", po::value<unsigned int>(&maxLhs),
              (std::string("max considered LHS size. Default: ") + std::to_string((unsigned int)-1)).c_str())
-            ("threads", po::value<unsigned int>(&parallelism))
+            ("minsup", po::value<double>(&minsup))
+            ("minconf", po::value<double>(&minconf))
             ;
 
     po::variables_map vm;
@@ -91,6 +96,7 @@ int main(int argc, char const *argv[]) {
     auto path = std::filesystem::current_path() / "inputData" / dataset;
 
     std::unique_ptr<FDAlgorithm> algorithmInstance;
+    std::unique_ptr<ARAlgorithm> arAlgorithmInstance;
     if (alg == "pyro") {
         algorithmInstance = std::make_unique<Pyro>(path, separator, hasHeader, seed, error, maxLhs, parallelism);
     } else if (alg == "tane"){
@@ -105,9 +111,11 @@ int main(int argc, char const *argv[]) {
         algorithmInstance = std::make_unique<Depminer>(path, separator, hasHeader);
     } else if (alg == "fdep") {
         algorithmInstance = std::make_unique<FDep>(path, separator, hasHeader);
+    } else if (alg == "apriori") {
+        arAlgorithmInstance = std::make_unique<EnumerationTree>(minsup, minconf, path, separator, hasHeader);
     }
     try {
-        unsigned long long elapsedTime = algorithmInstance->execute();
+        unsigned long long elapsedTime = arAlgorithmInstance->execute();
         std::cout << "> ELAPSED TIME: " << elapsedTime << std::endl;
     } catch (std::runtime_error& e) {
         std::cout << e.what() << std::endl;
