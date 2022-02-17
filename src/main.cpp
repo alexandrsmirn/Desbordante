@@ -47,6 +47,8 @@ int main(int argc, char const *argv[]) {
 
     double minconf = 0;
     double minsup = 0;
+    unsigned int inputFormatInteger = 0;
+    bool hasTransactionID = false;
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -61,6 +63,8 @@ int main(int argc, char const *argv[]) {
              (std::string("max considered LHS size. Default: ") + std::to_string((unsigned int)-1)).c_str())
             ("minsup", po::value<double>(&minsup))
             ("minconf", po::value<double>(&minconf))
+            ("inputFormat", po::value<unsigned int>(&inputFormatInteger))
+            ("hasTID", po::value<bool>(&hasTransactionID))
             ;
 
     po::variables_map vm;
@@ -112,7 +116,8 @@ int main(int argc, char const *argv[]) {
     } else if (alg == "fdep") {
         algorithmInstance = std::make_unique<FDep>(path, separator, hasHeader);
     } else if (alg == "apriori") {
-        arAlgorithmInstance = std::make_unique<EnumerationTree>(minsup, minconf, path, separator, hasHeader);
+        auto const inputFormat = static_cast<TransactionalInputFormat>(inputFormatInteger);
+        arAlgorithmInstance = std::make_unique<EnumerationTree>(minsup, minconf, path, inputFormat, hasTransactionID, separator, hasHeader);
     }
     try {
         unsigned long long elapsedTime = arAlgorithmInstance->execute();
