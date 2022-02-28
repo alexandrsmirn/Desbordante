@@ -4,7 +4,8 @@
 #include <iostream>
 #include <algorithm>
 
-void EnumerationTree::generateCandidates(std::vector<Node>& children) {
+void EnumerationTree::generateCandidates(std::vector<Node>& children,
+                                         std::unordered_map<Node*, std::list<Node>>& candidates) {
     auto const lastChildIter = children.end() - 1;
     for (auto childIter = children.begin(); childIter != lastChildIter; ++childIter) {
         for (auto childRightSiblingIter = std::next(childIter); childRightSiblingIter != children.end(); ++childRightSiblingIter) {
@@ -18,14 +19,16 @@ void EnumerationTree::generateCandidates(std::vector<Node>& children) {
     }
 }
 
-void EnumerationTree::createFirstLevelCandidates() {
+std::unordered_map<Node*, std::list<Node>> EnumerationTree::createFirstLevelCandidates() {
+    std::unordered_map<Node*, std::list<Node>> candidates;
     for (unsigned itemID = 0; itemID < transactionalData->getUniverseSize(); ++itemID) {
         candidates[&root].emplace_back(itemID);
     }
     ++levelNumber;
+    return candidates;
 }
 
-bool EnumerationTree::generateNextCandidateLevel() {
+void EnumerationTree::generateNextCandidateLevel(std::unordered_map<Node*, std::list<Node>>& lastLevelNodes) {
     std::stack<Node*> path;
     path.push(&root);
 
@@ -33,14 +36,13 @@ bool EnumerationTree::generateNextCandidateLevel() {
         auto node = path.top();
         path.pop();
         if (node->items.size() == levelNumber - 2 && !node->children.empty()) { //levelNumber is at least 2
-            generateCandidates(node->children);
+            generateCandidates(node->children, candidates);
         } else {
             updatePath(path, node->children);
         }
     }
 
     ++levelNumber;
-    return candidateHashTree->size() > 0;
 }
 
 void EnumerationTree::updatePath(std::stack<Node*> & path, std::vector<Node> & vertices) {
@@ -106,14 +108,16 @@ bool EnumerationTree::canBePruned(std::vector<unsigned> const& itemset) {
 
 unsigned long long EnumerationTree::findFrequent() {
     //TODO branching degree и minThreshold сделать зависимыми от номера уровня кандидатов
-    createFirstLevelCandidates();
+    std::unordered_map<Node*, std::list<Node>> candidates;
+    candidates = createFirstLevelCandidates();
     while (!candidates.empty()) {
-        candidateHashTree = std::make_unique<CandidateHashTree>(transactionalData.get(), candidates, 5, 5);
-        candidateHashTree->performCounting();
-        candidateHashTree->pruneNodes(minsup);
-        appendToTree();
-        candidates.clear();
-        generateNextCandidateLevel();
+        auto candidateHashTree = CandidateHashTree(transactionalData.get(), candidates,
+                                                   5, 5);
+        candidateHashTree.performCounting();
+        candidateHashTree.pruneNodes(minsup);
+
+        appendToTree(candidates);
+        candidates = generateNextCandidateLevel(candidates);
     }
     return 0;
 }
@@ -148,7 +152,9 @@ std::list<std::set<std::string>> EnumerationTree::getAllFrequent() const {
         std::set<std::string> itemNames;
         for (unsigned int item : currNode->items) {
             itemNames.insert(transactionalData->getItemUniverse()[item]);
+            std::cout << '<' << transactionalData->getItemUniverse()[item] << "> ";
         }
+        std::cout << '\n';
 
         frequentItemsets.push_back(std::move(itemNames));
         updatePath(path, currNode->children);
@@ -180,8 +186,8 @@ double EnumerationTree::getSupport(std::vector<unsigned int> const& frequentItem
     return -1;
 }
 
-void EnumerationTree::appendToTree() {
-    for (auto& [node, children] : candidates) {
+void EnumerationTree::appendToTree(std::unordered_map<Node*, std::list<Node>>& childrenMap) {
+    for (auto& [node, children] : childrenMap) {
         for (auto& child : children) {
             node->children.push_back(std::move(child));
         }
