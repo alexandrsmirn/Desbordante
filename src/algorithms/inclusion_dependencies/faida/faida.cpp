@@ -1,0 +1,104 @@
+#include "faida.h"
+
+namespace algos {
+
+std::vector<SimpleCC> Faida::CreateUnaryCCs(Preprocessor const& data) const {
+    std::vector<SimpleCC> combinations;
+    // TODO combinations.reserve(...)
+
+    int const index = 0;
+    for (unsigned table_num = 0; table_num < data.GetStores().size(); table_num++) {
+        auto const& store = data.GetStores()[table_num];
+        size_t const num_columns = store->GetSchema()->GetNumColumns();
+
+        for (unsigned col_idx = 0; col_idx < num_columns; col_idx++) {
+            if (store->IsConstantCol(col_idx) || store->IsNullCol(col_idx)) {
+                continue;
+                // TODO добавить опции is_ignore... как в метаноме
+            }
+            std::vector<int> col_indices(1, col_idx);
+            combinations.emplace_back(table_num, std::move(col_indices), index);
+        }
+    }
+
+    return combinations;
+}
+
+std::vector<SimpleIND> Faida::CreateUnaryINDCandidates(
+        std::vector<SimpleCC> const& combinations) const {
+    std::vector<SimpleIND> candidates;
+    candidates.reserve(combinations.size() * combinations.size());
+
+    for (auto left_it = combinations.begin(); left_it != combinations.end(); left_it++) {
+        for (auto right_it = combinations.begin(); right_it != combinations.end(); right_it++) {
+            if (left_it != right_it) {
+                // candidates.emplace_back(std::move(*left_it), std::move(*right_it));
+                // candidates.emplace_back(left_it.base(), right_it.base()); // если поля-указатели?
+                // TODO пока простое копирование
+                candidates.emplace_back(*left_it, *right_it);
+            }
+        }
+    }
+
+    return candidates;
+}
+
+unsigned long long Faida::Execute() {
+    // TODO может выделить на стеке??
+    std::unique_ptr<Preprocessor> data =
+            Preprocessor::CreateHashedStores(config_.dataset_name, data_streams_, kSampleGoal);
+
+    std::vector<SimpleCC> combinations = CreateUnaryCCs(*data);
+    // TODO вот тут стоит подумать, как аллоцируем комбинации и зависимости.
+    //  делаем ли указатели??
+    std::vector<SimpleIND> candidates = CreateUnaryINDCandidates(combinations);
+
+    auto active_tables = inclusion_tester_->SetCCs(combinations);
+    InsertRows(active_tables, *data);
+
+    std::vector<SimpleIND> result = TestCandidates(candidates);
+    result_ = std::move(result);
+
+    return 0;
+}
+
+void Faida::InsertRows(std::vector<int> const& active_tables, Preprocessor const& data) {
+    using std::vector;
+    // std::vector<std::vector<std::vector<size_t>>> samples;
+    vector<vector<vector<size_t>>> samples;
+    samples.reserve(data.GetStores().size());
+
+    for (auto const& store : data.GetStores()) {
+        samples.emplace_back(store->GetSample());
+    }
+    inclusion_tester_->Initialize(samples);
+
+    for (int curr_table : active_tables) {
+        // TODO: We always read all columns, even if we don't need to.
+        AbstractColumnStore const* const table_store = data.GetStores()[curr_table].get();
+        auto input_iter = table_store->GetRows();
+
+        inclusion_tester_->StartInsertRow(curr_table);
+        int row_idx = 0;
+        while (input_iter->HasNext()) {
+            inclusion_tester_->InsertRow(input_iter->GetNext(), row_idx++);
+        }
+    }
+
+    inclusion_tester_->FinalizeInsertion();
+}
+
+std::vector<SimpleIND> Faida::TestCandidates(std::vector<SimpleIND> const& candidates) {
+    std::vector<SimpleIND> result;
+
+    // unsigned candidate_count = 0;
+    for (SimpleIND candidate_ind : candidates) {
+        if (inclusion_tester_->IsIncludedIn(candidate_ind.left(), candidate_ind.right())) {
+            result.emplace_back(std::move(candidate_ind));
+        }
+    }
+
+    return result;
+}
+
+} // namespace algos
