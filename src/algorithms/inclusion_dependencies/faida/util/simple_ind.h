@@ -6,21 +6,21 @@
 
 class SimpleIND {
 private:
-    SimpleCC left_;
-    SimpleCC right_;
+    SimpleCC const* const left_;
+    SimpleCC const* const right_;
     //TODO может сделать поля указателями?
 public:
-    SimpleIND(SimpleCC left, SimpleCC right)
-            : left_(std::move(left)), right_(std::move(right)) {}
+    SimpleIND(SimpleCC const& left, SimpleCC const& right)
+            : left_(&left), right_(&right) {}
 
     bool operator==(SimpleIND const& other) const {
-        return this->left_ == other.left_ && this->right_ == other.right_;
+        return *(this->left_) == *(other.left_) && *(this->right_) == *(other.right_);
     }
 
     bool operator!=(SimpleIND const& other) const { return !(*this == other); }
 
-    SimpleCC const& left() const { return left_; }
-    SimpleCC const& right() const { return right_; }
+    SimpleCC const& left() const { return *left_; }
+    SimpleCC const& right() const { return *right_; }
 };
 
 //TODO улучшить??
