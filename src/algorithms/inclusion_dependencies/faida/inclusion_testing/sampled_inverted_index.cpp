@@ -55,12 +55,13 @@ void SampledInvertedIndex::FinalizeInsertion(
                 std::vector<int> ref_ccs;
                 ref_ccs.reserve(cc_indices.size() - 1);
                 for (int const ref_cc_index : cc_indices) {
-                    if (dep_cc_index == ref_cc_index) { continue; }
-                    ref_ccs.push_back(ref_cc_index);
+                    if (dep_cc_index != ref_cc_index) {
+                        ref_ccs.push_back(ref_cc_index);
+                    }
                 }
                 ref_by_dep_ccs[column_combinations[dep_cc_index]] = std::move(ref_ccs);
             } else if (!ref_ccs_iter->second.empty()) {
-                std::vector<int> ref_ccs = ref_ccs_iter->second;
+                std::vector<int>& ref_ccs = ref_ccs_iter->second;
                 //TODO если сделаем значение у inverted_index как упорядоченный map, то можно
                 // попробовать поработать с упорядоченным ретейном
 
@@ -70,7 +71,7 @@ void SampledInvertedIndex::FinalizeInsertion(
                                   ref_ccs.begin(),
                                   ref_ccs.end(),
                                   [&value_group] (int cc_id) {
-                                      return value_group.find(cc_id) != value_group.end();
+                                      return value_group.find(cc_id) == value_group.end();
                                   }),
                               ref_ccs.end());
                 //TODO возможно тупо заменить на копирование массива без ненужных элементов?
