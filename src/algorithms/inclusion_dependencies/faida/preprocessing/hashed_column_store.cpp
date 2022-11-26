@@ -132,20 +132,23 @@ HashedColumnStore::RowIterator::~RowIterator() {
 }
 
 bool HashedColumnStore::RowIterator::HasNext() {
-    return !hashed_col_streams_[0].eof();
-}
-
-std::vector<size_t> HashedColumnStore::RowIterator::GetNext() {
     std::vector<size_t> row_hashes(hashed_col_streams_.size());
 
     /*TODO подумать над буферизацией и распараллеливанием. соотвественно поменяется
-     * метод has_next
-     */
+     * метод has_next */
     unsigned col_idx = 0;
-    for (auto & column_stream : hashed_col_streams_) {
-        column_stream.read(reinterpret_cast<char*>(&row_hashes[col_idx++]),
-                           sizeof(size_t));
+    for (auto& column_stream : hashed_col_streams_) {
+        // read the value if there is not eof or any error
+        if (!column_stream.read(reinterpret_cast<char*>(&row_hashes[col_idx++]), sizeof(size_t))) {
+            curr_row_ = std::vector<size_t>(row_hashes.size(), 0);
+            return false;
+        }
     }
 
-    return row_hashes;
+    curr_row_ = std::move(row_hashes);
+    return true;
+}
+
+std::vector<size_t> const& HashedColumnStore::RowIterator::GetNext() {
+    return curr_row_;
 }

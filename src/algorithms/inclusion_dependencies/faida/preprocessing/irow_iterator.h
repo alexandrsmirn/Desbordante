@@ -9,7 +9,7 @@ public:
     //using value_type = std::vector<size_t>;
 
     virtual bool HasNext() = 0;
-    virtual std::vector<size_t> GetNext() = 0;
+    virtual std::vector<size_t> const& GetNext() = 0;
 
     virtual ~IRowIterator() = default;
 };

@@ -7,16 +7,18 @@ private:
     class RowIterator : public IRowIterator {
     private:
         std::vector<std::ifstream> hashed_col_streams_;
-        bool has_more_;
+        std::vector<size_t> curr_row_;
+        bool has_next_;
 
+        //void GetNextIfHas();
     public:
         //TODO описать методы по умолчанию
         explicit RowIterator(std::vector<std::ifstream> && hashed_columns)
-            : hashed_col_streams_(std::move(hashed_columns)), has_more_(true) {}
+            : hashed_col_streams_(std::move(hashed_columns)), has_next_(true) {}
         ~RowIterator() override;
 
         bool HasNext() override;
-        std::vector<size_t> GetNext() override;
+        std::vector<size_t> const& GetNext() override;
     };
 
 
