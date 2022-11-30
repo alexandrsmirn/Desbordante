@@ -19,7 +19,7 @@ else()
     # -DELPP_THREAD_SAFE -- for easylogging++ thread safety
     add_compile_options("$<$<CONFIG:Debug>:-O0;-DELPP_THREAD_SAFE;-g;-Wall;-Wextra;-Werror;-fno-omit-frame-pointer;-fsanitize=address>")
     add_link_options("$<$<CONFIG:Debug>:-fsanitize=address>")
-    add_compile_options("$<$<CONFIG:Release>:-O3;-DELPP_THREAD_SAFE>")
+    add_compile_options("$<$<CONFIG:Release>:-O3;-march=native;-DELPP_THREAD_SAFE>")
 endif()
 
 # configuring boost
@@ -34,6 +34,7 @@ include_directories(
     "src/algorithms/aidfd"
     "src/algorithms/dfd"
     "src/algorithms/association_rules"
+    "src/algorithms/inclusion_dependencies"
     "src/algorithms/depminer"
     "src/model"
     "src/model/types"

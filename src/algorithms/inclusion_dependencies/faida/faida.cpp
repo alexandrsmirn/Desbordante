@@ -1,5 +1,7 @@
 #include "faida.h"
 
+#include "easylogging++.h"
+
 namespace algos {
 
 std::vector<SimpleCC> Faida::CreateUnaryCCs(Preprocessor const& data) const {
@@ -44,6 +46,8 @@ std::vector<SimpleIND> Faida::CreateUnaryINDCandidates(
 }
 
 unsigned long long Faida::Execute() {
+    auto start_time = std::chrono::system_clock::now();
+
     // TODO может выделить на стеке??
     std::unique_ptr<Preprocessor> data =
             Preprocessor::CreateHashedStores(config_.dataset_name, data_streams_, kSampleGoal);
@@ -59,7 +63,14 @@ unsigned long long Faida::Execute() {
     std::vector<SimpleIND> result = TestCandidates(candidates);
     result_ = std::move(result);
 
-    return 0;
+    auto elapsed_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now() - start_time);
+    long long millis = elapsed_milliseconds.count();
+
+    LOG(INFO) << "сertain:\t" << inclusion_tester_->GetNumCertainChecks();
+    LOG(INFO) << "uncertain:\t" << inclusion_tester_->GetNumUncertainChecks();
+
+    return millis;
 }
 
 void Faida::InsertRows(std::vector<int> const& active_tables, Preprocessor const& data) {
@@ -83,6 +94,7 @@ void Faida::InsertRows(std::vector<int> const& active_tables, Preprocessor const
         while (input_iter->HasNext()) {
             inclusion_tester_->InsertRow(input_iter->GetNext(), row_idx++);
         }
+        LOG(INFO) << "num rows:\t" << row_idx;
     }
 
     inclusion_tester_->FinalizeInsertion();
@@ -92,9 +104,9 @@ std::vector<SimpleIND> Faida::TestCandidates(std::vector<SimpleIND> const& candi
     std::vector<SimpleIND> result;
 
     // unsigned candidate_count = 0;
-    for (SimpleIND candidate_ind : candidates) {
+    for (SimpleIND const& candidate_ind : candidates) {
         if (inclusion_tester_->IsIncludedIn(candidate_ind.left(), candidate_ind.right())) {
-            result.emplace_back(std::move(candidate_ind));
+            result.emplace_back(candidate_ind);
         }
     }
 

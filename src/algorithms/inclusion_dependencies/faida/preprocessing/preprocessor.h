@@ -6,7 +6,8 @@ class Preprocessor {
 private:
     std::vector<std::unique_ptr<AbstractColumnStore>> stores_;
 
-    inline static size_t kNullHash = std::hash<std::string>{}(""); //TODO нужно как-то сделать полем
+    //inline static size_t kNullHash = std::hash<std::string>{}(""); //TODO нужно как-то сделать полем
+    inline static size_t kNullHash = 0;
 
     explicit Preprocessor(std::vector<std::unique_ptr<AbstractColumnStore>> && stores)
             : stores_(std::move(stores)) {}

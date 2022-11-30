@@ -19,5 +19,5 @@ void HllInclusionTester::InsertRowIntoHLL(SimpleCC const& cc, size_t row_hash, H
     if (!hll.has_value()) {
         data.SetHll(hll::HyperLogLog(CalcNumBits(error_)));
     }
-    hll->add_hash_32(row_hash);
+    hll->add_hash(row_hash);
 }

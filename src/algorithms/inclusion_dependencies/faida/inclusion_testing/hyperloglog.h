@@ -7,6 +7,8 @@
  * @author Hideaki Ohno
  */
 
+#include "immintrin.h"
+
 #include <vector>
 #include <cmath>
 #include <sstream>
@@ -109,10 +111,19 @@ public:
         }
     }
 
-    /*void add_hash(size_t value_hash) {
-        int index = value_hash >> (sizeof(size_t) - b_);
-        int rank =
-    }*/
+    int zcf(size_t hash, int prec) {
+        size_t mask = ~(((1 << prec) - 1) << (64 - prec));
+        return _lzcnt_u64(hash & mask) - (uint8_t) prec;
+    }
+
+    void add_hash(size_t value_hash) {
+        int index = (int) (value_hash >> (8 * sizeof(size_t) - b_));
+        int rank = _lzcnt_u64((value_hash << b_) | (1 << (b_ - 1)) + 1) + 1;
+        //int rank = zcf(value_hash, b_) + 1;
+        if (rank > M_[index]) {
+            M_[index] = rank;
+        }
+    }
 
     /**
      * Estimates cardinality value.

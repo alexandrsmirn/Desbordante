@@ -27,7 +27,8 @@ protected:
     std::unique_ptr<RelationalSchema> schema;
     int const kSampleGoal;
     std::vector<ColumnProperty> column_properties;
-    size_t const kNullHash = std::hash<std::string>{}("");
+    //size_t const kNullHash = std::hash<std::string>{}(""); //TODO
+    size_t const kNullHash = 0;
     //const HashFunction = std::hash<std::string>(); //TODO
 
     AbstractColumnStore(unsigned num_of_columns, int sample_goal)

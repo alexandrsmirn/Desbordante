@@ -41,16 +41,16 @@ std::filesystem::path AbstractColumnStore::PrepareDir(std::string const& dataset
 }
 
 size_t AbstractColumnStore::hash(std::string const& str) const {
-    //size_t curr_hash = std::hash<std::string>{}(str);
-    uint32_t curr_hash;
-    MurmurHash3_x86_32(str.data(), str.size(), 313, &curr_hash);
+    size_t curr_hash[2];
+    //because std::string consists of one byte characters
+    MurmurHash3_x64_128(str.data(), str.size(), 0, &curr_hash);
 
-    if (curr_hash == kNullHash && !str.empty()) {
-        curr_hash += 1; // to avoid collision with nullhash
+    if (curr_hash[0] == kNullHash && !str.empty()) {
+        curr_hash[0] += 1; // to avoid collision with nullhash
     }
 
     // TODO реализовать кеширование хешей
-    return curr_hash;
+    return curr_hash[0];
 }
 
 void AbstractColumnStore::WriteSample(std::vector<std::vector<std::string>> const& rows) {
