@@ -8,7 +8,8 @@ std::filesystem::path HashedColumnStore::PrepareDirNext(std::filesystem::path di
         std::string file_name;
         file_name += std::to_string(table_id);
         file_name += "_";
-        file_name += column->GetName();
+        //file_name += column->GetName(); //TODO баг: не обрабатываются колонки, у которых есть / в имени
+        file_name += std::to_string(column->GetIndex());
         file_name += ".bin";
 
         std::filesystem::path column_file = dir / file_name;

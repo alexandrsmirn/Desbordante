@@ -15,6 +15,7 @@ std::vector<SimpleCC> Faida::CreateUnaryCCs(Preprocessor const& data) const {
 
         for (unsigned col_idx = 0; col_idx < num_columns; col_idx++) {
             if (store->IsConstantCol(col_idx) || store->IsNullCol(col_idx)) {
+                LOG(INFO) << "got null or constant col " << col_idx;
                 continue;
                 // TODO добавить опции is_ignore... как в метаноме
             }
@@ -69,12 +70,15 @@ unsigned long long Faida::Execute() {
 
     LOG(INFO) << "сertain:\t" << inclusion_tester_->GetNumCertainChecks();
     LOG(INFO) << "uncertain:\t" << inclusion_tester_->GetNumUncertainChecks();
+    LOG(INFO) << "time:\t" << millis;
+    LOG(INFO) << "ind count:\t" << result.size();
 
     return millis;
 }
 
 void Faida::InsertRows(std::vector<int> const& active_tables, Preprocessor const& data) {
     using std::vector;
+    auto start_time = std::chrono::system_clock::now();
     // std::vector<std::vector<std::vector<size_t>>> samples;
     vector<vector<vector<size_t>>> samples;
     samples.reserve(data.GetStores().size());
@@ -92,12 +96,17 @@ void Faida::InsertRows(std::vector<int> const& active_tables, Preprocessor const
         inclusion_tester_->StartInsertRow(curr_table);
         int row_idx = 0;
         while (input_iter->HasNext()) {
+            //auto row = input_iter->GetNext();
+            //inclusion_tester_->InsertRow(row, row_idx++);
             inclusion_tester_->InsertRow(input_iter->GetNext(), row_idx++);
         }
         LOG(INFO) << "num rows:\t" << row_idx;
     }
 
     inclusion_tester_->FinalizeInsertion();
+    auto elapsed_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now() - start_time);
+    LOG(INFO) << "insert rows time:\t" << elapsed_milliseconds.count();
 }
 
 std::vector<SimpleIND> Faida::TestCandidates(std::vector<SimpleIND> const& candidates) {
@@ -107,6 +116,7 @@ std::vector<SimpleIND> Faida::TestCandidates(std::vector<SimpleIND> const& candi
     for (SimpleIND const& candidate_ind : candidates) {
         if (inclusion_tester_->IsIncludedIn(candidate_ind.left(), candidate_ind.right())) {
             result.emplace_back(candidate_ind);
+            //LOG(INFO) << candidate_ind.left().GetColumnIndices()[0] << ' ' << candidate_ind.right().GetColumnIndices()[0];
         }
     }
 

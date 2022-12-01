@@ -1,5 +1,7 @@
 #include "combined_inclusion_tester.h"
 
+#include "easylogging++.h"
+
 #include "inclusion_dependencies/faida/hashing/hashing.h"
 
 std::vector<int> CombinedInclusionTester::SetCCs(std::vector<SimpleCC>& combinations) {
@@ -9,7 +11,7 @@ std::vector<int> CombinedInclusionTester::SetCCs(std::vector<SimpleCC>& combinat
         active_tables_set.insert(cc.GetTableNum());
 
         /*
-        //TODO тут попробовать мувать СС
+        // тут попробовать мувать СС
         auto& hlls_by_cc = hlls_by_table_[cc.GetTableNum()];
         hlls_by_cc[cc] = CreateApproxDataStructure(cc);
         // или вот так: hlls_by_table_[cc.GetTableNum()][cc] = CreateApproxDataStructure(cc);
