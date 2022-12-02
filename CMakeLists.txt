@@ -49,6 +49,7 @@ include_directories(
 
     "lib/easyloggingpp/src"
     "lib/better-enums/"
+    "lib/emhash"
     )
 
 # adding submodules

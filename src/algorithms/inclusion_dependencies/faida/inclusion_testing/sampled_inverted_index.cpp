@@ -16,7 +16,8 @@ bool SampledInvertedIndex::Update(SimpleCC const& combination, size_t combined_h
 void SampledInvertedIndex::Init(std::vector<size_t> const& sampled_hashes, int max_id) {
     int const bucket_count = 4; //TODO подумать сколько тут сделать
     for (size_t combined_hash : sampled_hashes) {
-        inverted_index_.try_emplace(combined_hash, std::unordered_set<int>(bucket_count));
+        //inverted_index_.try_emplace(combined_hash, std::unordered_set<int>(bucket_count));
+        inverted_index_.try_emplace(combined_hash, emhash2::HashSet<int>(4));
     }
     max_id_ = max_id;
     /*seen_cc_indices_.resize(max_id);
@@ -45,7 +46,8 @@ void SampledInvertedIndex::FinalizeInsertion(
         }
     }
 
-    for (auto const& [hash, cc_indices] : inverted_index_) {
+    for (auto const& [cc_indices, _, hash] : inverted_index_) {
+        //TODO возмонжо есть коллизии? узнать, зачем такой биндинг
         for (int const dep_cc_index : cc_indices) {
             seen_cc_indices_.set(dep_cc_index);
             auto ref_ccs_iter = ref_by_dep_ccs.find(column_combinations[dep_cc_index]);

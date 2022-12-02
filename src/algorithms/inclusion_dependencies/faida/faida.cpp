@@ -71,7 +71,7 @@ unsigned long long Faida::Execute() {
     LOG(INFO) << "сertain:\t" << inclusion_tester_->GetNumCertainChecks();
     LOG(INFO) << "uncertain:\t" << inclusion_tester_->GetNumUncertainChecks();
     LOG(INFO) << "time:\t" << millis;
-    LOG(INFO) << "ind count:\t" << result.size();
+    LOG(INFO) << "ind count:\t" << result_.size();
 
     return millis;
 }
