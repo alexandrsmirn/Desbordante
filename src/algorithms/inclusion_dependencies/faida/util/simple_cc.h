@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <memory>
 
 /*
  * Represents a column combination as a vector of the column indices
@@ -47,5 +48,12 @@ struct std::hash<SimpleCC> {
             seed ^= i + 0x9e3779b9 + (seed << 6) + (seed >> 2);
         }
         return seed;
+    }
+};
+
+template<>
+struct std::hash<std::shared_ptr<SimpleCC>> {
+    size_t operator()(std::shared_ptr<SimpleCC> const& cc) const {
+        return std::hash<SimpleCC>()(*cc);
     }
 };

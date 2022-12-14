@@ -4,11 +4,11 @@
 
 #include "inclusion_dependencies/faida/hashing/hashing.h"
 
-std::vector<int> CombinedInclusionTester::SetCCs(std::vector<SimpleCC>& combinations) {
+std::vector<int> CombinedInclusionTester::SetCCs(std::vector<std::shared_ptr<SimpleCC>>& combinations) {
     std::set<int> active_tables_set;
     int index = 0;
-    for (SimpleCC& cc : combinations) {
-        active_tables_set.insert(cc.GetTableNum());
+    for (auto const& cc : combinations) {
+        active_tables_set.insert(cc->GetTableNum());
 
         /*
         // тут попробовать мувать СС
@@ -21,10 +21,10 @@ std::vector<int> CombinedInclusionTester::SetCCs(std::vector<SimpleCC>& combinat
         // можно попробовать как-то оптимизировать на основе этого наблюдения
 
         //TODO так делаю потому что не уверен что в combinations все cc униклаьны. воозможно я ошибаюсь
-        auto& hlls_by_cc = hlls_by_table_[cc.GetTableNum()];
+        auto& hlls_by_cc = hlls_by_table_[cc->GetTableNum()];
         if (hlls_by_cc.find(cc) == hlls_by_cc.end()) {
-            cc.SetIndex(index++);
-            hlls_by_cc[cc] = CreateApproxDataStructure(cc);
+            cc->SetIndex(index++);
+            hlls_by_cc[cc] = CreateApproxDataStructure(*cc);
         }
     }
     max_id_ = index;
@@ -47,7 +47,7 @@ void CombinedInclusionTester::Initialize(
         auto hll_by_cc_iter = hlls_by_table_.find(table);
 
         if (hll_by_cc_iter != hlls_by_table_.end()) {
-            std::unordered_map<SimpleCC, HLLData> const& hll_by_cc = hll_by_cc_iter->second;
+            std::unordered_map<std::shared_ptr<SimpleCC>, HLLData> const& hll_by_cc = hll_by_cc_iter->second;
             auto const& table_sample = samples_for_tables[table];
 
             for (std::vector<size_t> const& sample_row : table_sample) {
@@ -55,7 +55,7 @@ void CombinedInclusionTester::Initialize(
                     size_t combined_hash = 0;
                     bool is_any_null = false;
 
-                    for (int col_idx : cc.GetColumnIndices()) {
+                    for (int col_idx : cc->GetColumnIndices()) {
                         size_t value_hash = sample_row[col_idx];
                         if (value_hash == Preprocessor::GetNullHash()) {
                             is_any_null = true;
@@ -84,7 +84,7 @@ void CombinedInclusionTester::InsertRow(std::vector<size_t> const& value_hashes,
         size_t combined_hash = 0;
         bool has_null = false;
 
-        for (int col_idx : cc.GetColumnIndices()) {
+        for (int col_idx : cc->GetColumnIndices()) {
             size_t const value_hash = value_hashes[col_idx];
             if (value_hash == Preprocessor::GetNullHash()) {
                 has_null = true;
@@ -97,9 +97,9 @@ void CombinedInclusionTester::InsertRow(std::vector<size_t> const& value_hashes,
         if (has_null) { continue; }
 
         //row not found in inverted index (cc is not covered)
-        if (!sampled_inverted_index_.Update(cc, combined_hash)) {
+        if (!sampled_inverted_index_.Update(*cc, combined_hash)) {
             // so we insert cc into hll if row does not contain null value and is not covered by inv_index
-            InsertRowIntoHLL(cc, combined_hash, hll_data);
+            InsertRowIntoHLL(*cc, combined_hash, hll_data);
         }
     }
 }
@@ -108,10 +108,10 @@ void CombinedInclusionTester::StartInsertRow(int table_num) {
     curr_table_num_ = table_num;
 }
 
-bool CombinedInclusionTester::IsIncludedIn(SimpleCC const& dep, SimpleCC const& ref) {
+bool CombinedInclusionTester::IsIncludedIn(std::shared_ptr<SimpleCC> const& dep, std::shared_ptr<SimpleCC> const& ref) {
     //TODO возможно вставка null-ов где-то выше в метантме нужна именно тут
-    if (hlls_by_table_[ref.GetTableNum()].find(ref) == hlls_by_table_[ref.GetTableNum()].end()
-        || hlls_by_table_[dep.GetTableNum()].find(dep) == hlls_by_table_[dep.GetTableNum()].end()) {
+    if (hlls_by_table_[ref->GetTableNum()].find(ref) == hlls_by_table_[ref->GetTableNum()].end()
+        || hlls_by_table_[dep->GetTableNum()].find(dep) == hlls_by_table_[dep->GetTableNum()].end()) {
         //TODO assert
     }
 

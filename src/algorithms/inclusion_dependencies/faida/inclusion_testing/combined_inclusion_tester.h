@@ -18,13 +18,13 @@ private:
 
     int max_id_;
 
-    bool TestWithHLLs(SimpleCC const& dep, SimpleCC const& ref) {
-        return TestWithHLLs(hlls_by_table_[dep.GetTableNum()][dep],
-                            hlls_by_table_[ref.GetTableNum()][ref]);
+    bool TestWithHLLs(std::shared_ptr<SimpleCC> const& dep, std::shared_ptr<SimpleCC> const& ref) {
+        return TestWithHLLs(hlls_by_table_[dep->GetTableNum()][dep],
+                            hlls_by_table_[ref->GetTableNum()][ref]);
     }
 
 protected:
-    std::unordered_map<int, std::unordered_map<SimpleCC, HLLData>> hlls_by_table_;
+    std::unordered_map<int, std::unordered_map<std::shared_ptr<SimpleCC>, HLLData>> hlls_by_table_;
 
     virtual HLLData CreateApproxDataStructure(SimpleCC const& combination) = 0;
     virtual void InsertRowIntoHLL(SimpleCC const& cc, size_t row_hash, HLLData& data) = 0;
@@ -36,13 +36,13 @@ public:
     //TODO по хорошему опять же стоит переделать всё в FactoryMethod
 
     //TODO размышления про ссылки в комментах к IInclusionTester
-    std::vector<int> SetCCs(std::vector<SimpleCC>& combinations) override;
+    std::vector<int> SetCCs(std::vector<std::shared_ptr<SimpleCC>>& combinations) override;
     void Initialize(std::vector<std::vector<std::vector<size_t>>> const& table_samples) override;
 
     void StartInsertRow(int table_num) override;
     void InsertRow(std::vector<size_t> const& values, int row_idx) override;
 
-    bool IsIncludedIn(SimpleCC const& dep, SimpleCC const& ref) override;
+    bool IsIncludedIn(std::shared_ptr<SimpleCC> const& dep, std::shared_ptr<SimpleCC> const& ref) override;
 
     void FinalizeInsertion() override { sampled_inverted_index_.FinalizeInsertion(hlls_by_table_); };
 

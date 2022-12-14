@@ -36,15 +36,15 @@ public:
     void Init(std::vector<size_t> const& sampled_hashes, int max_id);
     bool Update(SimpleCC const& combination, size_t hash); //TODO maybe private?
 
-    bool IsCovered(SimpleCC const& combination) {
-        return !non_covered_cc_indices_.test(combination.GetIndex());
+    bool IsCovered(std::shared_ptr<SimpleCC> const& combination) {
+        return !non_covered_cc_indices_.test(combination->GetIndex());
     }
 
-    bool IsIncludedIn(SimpleCC const& a, SimpleCC const& b) {
-        return !seen_cc_indices_.test(a.GetIndex())
+    bool IsIncludedIn(std::shared_ptr<SimpleCC> const& a, std::shared_ptr<SimpleCC> const& b) {
+        return !seen_cc_indices_.test(a->GetIndex())
                || discovered_inds_.find(SimpleIND(a, b)) != discovered_inds_.end();
         //TODO проверить копирование
     }
 
-    void FinalizeInsertion(std::unordered_map<int, std::unordered_map<SimpleCC, HLLData>> const& hlls_by_table);
+    void FinalizeInsertion(std::unordered_map<int, std::unordered_map<std::shared_ptr<SimpleCC>, HLLData>> const& hlls_by_table);
 };

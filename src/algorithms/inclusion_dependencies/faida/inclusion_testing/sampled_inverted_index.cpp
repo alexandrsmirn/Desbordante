@@ -32,13 +32,13 @@ void SampledInvertedIndex::Init(std::vector<size_t> const& sampled_hashes, int m
 }
 
 void SampledInvertedIndex::FinalizeInsertion(
-        std::unordered_map<int, std::unordered_map<SimpleCC, HLLData>> const& hlls_by_table) {
-    std::unordered_map<SimpleCC const*, std::vector<int>> ref_by_dep_ccs(max_id_ + 1); //TODO ptr hash??? и хз насчет размера
-    std::vector<SimpleCC const*> column_combinations(max_id_ + 1);
+        std::unordered_map<int, std::unordered_map<std::shared_ptr<SimpleCC>, HLLData>> const& hlls_by_table) {
+    std::unordered_map<std::shared_ptr<SimpleCC>, std::vector<int>> ref_by_dep_ccs(max_id_ + 1); //TODO ptr hash??? и хз насчет размера
+    std::vector<std::shared_ptr<SimpleCC>> column_combinations(max_id_ + 1);
 
     for (auto const& [table_num, hlls_by_cc] : hlls_by_table) {
         for (auto const& [cc, ints] : hlls_by_cc) {
-            column_combinations[cc.GetIndex()] = &cc;
+            column_combinations[cc->GetIndex()] = cc;
             //TODO!!! ref_by_dep_ccs -- хз что делать с нуллами.
             // видимо эта строчка даже не нужна, поскольку в get ниже мы все равно получили бы null
             // вне зависимости от того, добавилили ли мы его тут или нет (но хз).
@@ -91,7 +91,8 @@ void SampledInvertedIndex::FinalizeInsertion(
         for (int const rhs : rhss) {
             //auto qwe = SimpleIND(*lhs, *(column_combinations[rhs]));
             //TODO снова чек копирование
-            discovered_inds_.insert(SimpleIND(*lhs, *(column_combinations[rhs])));
+            // emplace?
+            discovered_inds_.insert(SimpleIND(lhs, column_combinations[rhs]));
         }
     }
 }

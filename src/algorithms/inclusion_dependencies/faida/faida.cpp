@@ -4,8 +4,8 @@
 
 namespace algos {
 
-std::vector<SimpleCC> Faida::CreateUnaryCCs(Preprocessor const& data) const {
-    std::vector<SimpleCC> combinations;
+std::vector<std::shared_ptr<SimpleCC>> Faida::CreateUnaryCCs(Preprocessor const& data) const {
+    std::vector<std::shared_ptr<SimpleCC>> combinations;
     // TODO combinations.reserve(...)
 
     int const index = 0;
@@ -20,7 +20,7 @@ std::vector<SimpleCC> Faida::CreateUnaryCCs(Preprocessor const& data) const {
                 // TODO добавить опции is_ignore... как в метаноме
             }
             std::vector<int> col_indices(1, col_idx);
-            combinations.emplace_back(table_num, std::move(col_indices), index);
+            combinations.emplace_back(std::make_shared<SimpleCC>(table_num, std::move(col_indices), index));
         }
     }
 
@@ -28,7 +28,7 @@ std::vector<SimpleCC> Faida::CreateUnaryCCs(Preprocessor const& data) const {
 }
 
 std::vector<SimpleIND> Faida::CreateUnaryINDCandidates(
-        std::vector<SimpleCC> const& combinations) const {
+        std::vector<std::shared_ptr<SimpleCC>> const& combinations) const {
     std::vector<SimpleIND> candidates;
     candidates.reserve(combinations.size() * combinations.size());
 
@@ -53,7 +53,7 @@ unsigned long long Faida::Execute() {
     std::unique_ptr<Preprocessor> data =
             Preprocessor::CreateHashedStores(config_.dataset_name, data_streams_, kSampleGoal);
 
-    std::vector<SimpleCC> combinations = CreateUnaryCCs(*data);
+    std::vector<std::shared_ptr<SimpleCC>> combinations = CreateUnaryCCs(*data);
     // TODO вот тут стоит подумать, как аллоцируем комбинации и зависимости.
     //  делаем ли указатели??
     std::vector<SimpleIND> candidates = CreateUnaryINDCandidates(combinations);
