@@ -43,6 +43,7 @@ public:
 
     std::vector<std::shared_ptr<SimpleCC>> CreateUnaryCCs(Preprocessor const& data) const;
     std::vector<SimpleIND> CreateUnaryINDCandidates(std::vector<std::shared_ptr<SimpleCC>> const& combinations) const;
+    std::vector<std::shared_ptr<SimpleCC>> ExtractCCs(std::vector<SimpleIND>& candidates) const;
 };
 
 } // namespace algos

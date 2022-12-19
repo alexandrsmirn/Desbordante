@@ -2,6 +2,8 @@
 
 #include "easylogging++.h"
 
+#include "candidate_generation/apriori_candidate_generator.h"
+
 namespace algos {
 
 std::vector<std::shared_ptr<SimpleCC>> Faida::CreateUnaryCCs(Preprocessor const& data) const {
@@ -46,8 +48,21 @@ std::vector<SimpleIND> Faida::CreateUnaryINDCandidates(
     return candidates;
 }
 
+std::vector<std::shared_ptr<SimpleCC>> Faida::ExtractCCs(std::vector<SimpleIND>& candidates) const {
+    std::unordered_set<std::shared_ptr<SimpleCC>> combinations;
+    for (auto& ind_candidate : candidates) {
+        //size_t left_hash = std::hash<std::shared_ptr<SimpleCC>>{}(ind_candidate.left());
+        //size_t right_hash = std::hash<std::shared_ptr<SimpleCC>>{}(ind_candidate.right());
+        combinations.insert(ind_candidate.left());
+        combinations.insert(ind_candidate.right());
+    }
+    //TODO может тут сразу сет возвращать?
+    return std::vector<std::shared_ptr<SimpleCC>>(combinations.begin(), combinations.end());
+}
+
 unsigned long long Faida::Execute() {
     auto start_time = std::chrono::system_clock::now();
+    size_t count = 0;
 
     // TODO может выделить на стеке??
     std::unique_ptr<Preprocessor> data =
@@ -57,21 +72,38 @@ unsigned long long Faida::Execute() {
     // TODO вот тут стоит подумать, как аллоцируем комбинации и зависимости.
     //  делаем ли указатели??
     std::vector<SimpleIND> candidates = CreateUnaryINDCandidates(combinations);
+    LOG(INFO) << "candidates:\t" << candidates.size();
 
     auto active_tables = inclusion_tester_->SetCCs(combinations);
     InsertRows(active_tables, *data);
 
-    std::vector<SimpleIND> result = TestCandidates(candidates);
-    result_ = std::move(result);
+    std::vector<SimpleIND> last_result = TestCandidates(candidates);
+    count += last_result.size();
+    if (kDetectNary) {
+        while (!last_result.empty()) {
+            // TODO комбинации можно прям вот тут возвращать
+            candidates = AprioriCandidateGenerator::CreateCombinedCandidates(last_result);
+            if (candidates.empty()) {
+                break;
+            }
+            LOG(INFO) << "candidates:\t" << candidates.size();
+            combinations = ExtractCCs(candidates); //TODO может возвращать хеш таблицу?
+            active_tables = inclusion_tester_->SetCCs(combinations);
+            InsertRows(active_tables, *data);
+
+            last_result = TestCandidates(candidates);
+            count += last_result.size();
+        }
+    }
 
     auto elapsed_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::system_clock::now() - start_time);
     long long millis = elapsed_milliseconds.count();
 
-    LOG(INFO) << "сertain:\t" << inclusion_tester_->GetNumCertainChecks();
+    LOG(INFO) << "\nсertain:\t" << inclusion_tester_->GetNumCertainChecks();
     LOG(INFO) << "uncertain:\t" << inclusion_tester_->GetNumUncertainChecks();
     LOG(INFO) << "time:\t" << millis;
-    LOG(INFO) << "ind count:\t" << result_.size();
+    LOG(INFO) << "ind count:\t" << count;
 
     return millis;
 }

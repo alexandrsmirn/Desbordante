@@ -30,11 +30,18 @@ public:
     }
 
     bool operator!=(SimpleCC const& other) const { return !(*this == other); }
+    bool StartsWith(SimpleCC const& other) const {
+        return std::equal(this->column_indices_.begin(),
+                          this->column_indices_.end() - 1,
+                          other.column_indices_.begin(),
+                          other.column_indices_.end() - 1);
+    }
 
     void SetIndex(int index) { index_ = index; }
 
     int GetIndex() const { return index_; }
     int GetTableNum() const { return table_num_; }
+    int GetLastColumn() const { return column_indices_.back(); }
     std::vector<int> const& GetColumnIndices() const { return column_indices_; }
 };
 
@@ -55,5 +62,12 @@ template<>
 struct std::hash<std::shared_ptr<SimpleCC>> {
     size_t operator()(std::shared_ptr<SimpleCC> const& cc) const {
         return std::hash<SimpleCC>()(*cc);
+    }
+};
+
+template<>
+struct std::equal_to<std::shared_ptr<SimpleCC>> {
+    bool operator()(std::shared_ptr<SimpleCC> const& left, std::shared_ptr<SimpleCC> const& right) const {
+        return *left == *right;
     }
 };
