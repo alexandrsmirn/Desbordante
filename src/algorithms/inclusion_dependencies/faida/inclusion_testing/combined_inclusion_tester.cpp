@@ -5,6 +5,7 @@
 #include "inclusion_dependencies/faida/hashing/hashing.h"
 
 std::vector<int> CombinedInclusionTester::SetCCs(std::vector<std::shared_ptr<SimpleCC>>& combinations) {
+    hlls_by_table_.clear();
     std::set<int> active_tables_set;
     int index = 0;
     for (auto const& cc : combinations) {
@@ -41,6 +42,8 @@ void CombinedInclusionTester::Initialize(
     // возможно они пытаются немного упорядочить масстив CC по таблицам, но хз зачем.
     // ещё есть вариант что изначальный список CC содержит дубликаты, и таким способом они пытаются
     // от них избавиться (путем добавления в хешмап)
+
+    //TODO тип индексировать CC по индексам, а не передавать хеши?
 
     std::vector<size_t> samples; //TODO reserve???
     for (int table = 0; table < (int) samples_for_tables.size(); table++) {
