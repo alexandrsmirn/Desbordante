@@ -10,6 +10,7 @@
 //emhash7 table быстрее работает, но там муть со structure binding и бакетами, нет ли лишнего??
 //у хештейбла из emhash5 лучший результат, но почему-то неправильные ответы! обработка коллизий?
 #include "hash_table7.hpp"
+#include "hash_table8.hpp"
 
 #include <boost/dynamic_bitset.hpp>
 
@@ -46,5 +47,5 @@ public:
         //TODO проверить копирование
     }
 
-    void FinalizeInsertion(std::unordered_map<int, std::unordered_map<std::shared_ptr<SimpleCC>, HLLData>> const& hlls_by_table);
+    void FinalizeInsertion(std::unordered_map<int, emhash8::HashMap<std::shared_ptr<SimpleCC>, HLLData>> const& hlls_by_table);
 };

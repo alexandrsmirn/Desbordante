@@ -32,7 +32,7 @@ void SampledInvertedIndex::Init(std::vector<size_t> const& sampled_hashes, int m
 }
 
 void SampledInvertedIndex::FinalizeInsertion(
-        std::unordered_map<int, std::unordered_map<std::shared_ptr<SimpleCC>, HLLData>> const& hlls_by_table) {
+        std::unordered_map<int, emhash8::HashMap<std::shared_ptr<SimpleCC>, HLLData>> const& hlls_by_table) {
     std::unordered_map<std::shared_ptr<SimpleCC>, std::vector<int>> ref_by_dep_ccs(max_id_ + 1); //TODO ptr hash??? и хз насчет размера
     std::vector<std::shared_ptr<SimpleCC>> column_combinations(max_id_ + 1);
 

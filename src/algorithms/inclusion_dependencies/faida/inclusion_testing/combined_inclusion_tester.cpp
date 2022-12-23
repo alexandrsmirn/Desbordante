@@ -50,7 +50,7 @@ void CombinedInclusionTester::Initialize(
         auto hll_by_cc_iter = hlls_by_table_.find(table);
 
         if (hll_by_cc_iter != hlls_by_table_.end()) {
-            std::unordered_map<std::shared_ptr<SimpleCC>, HLLData> const& hll_by_cc = hll_by_cc_iter->second;
+            auto const& hll_by_cc = hll_by_cc_iter->second;
             auto const& table_sample = samples_for_tables[table];
 
             for (std::vector<size_t> const& sample_row : table_sample) {
@@ -87,7 +87,7 @@ void CombinedInclusionTester::InsertRow(std::vector<size_t> const& value_hashes,
         size_t combined_hash = 0;
         bool has_null = false;
 
-        for (int col_idx : cc->GetColumnIndices()) {
+        for (int const col_idx : cc->GetColumnIndices()) {
             size_t const value_hash = value_hashes[col_idx];
             if (value_hash == Preprocessor::GetNullHash()) {
                 has_null = true;
