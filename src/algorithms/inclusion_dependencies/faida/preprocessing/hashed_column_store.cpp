@@ -132,24 +132,32 @@ HashedColumnStore::RowIterator::~RowIterator() {
     }
 }
 
-bool HashedColumnStore::RowIterator::HasNext() {
-    std::vector<size_t> row_hashes(hashed_col_streams_.size());
+bool HashedColumnStore::RowIterator::HasNextBlock() {
+    if (!has_next_) return false;
+
+    int const bufsize = 1024;
+    std::vector<std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>>>
+            row_hashes_inv(hashed_col_streams_.size(),
+                           std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>>(bufsize));
 
     /*TODO подумать над буферизацией и распараллеливанием. соотвественно поменяется
      * метод has_next */
     unsigned col_idx = 0;
+    //bool last_block = false;
     for (auto& column_stream : hashed_col_streams_) {
         // read the value if there is not eof or any error
-        if (!column_stream.read(reinterpret_cast<char*>(&row_hashes[col_idx++]), sizeof(size_t))) {
-            curr_row_ = std::vector<size_t>(row_hashes.size(), 0);
-            return false;
+        if (!column_stream.read(reinterpret_cast<char*>(row_hashes_inv[col_idx].data()),
+                                bufsize * sizeof(size_t))) {
+            has_next_ = false;
+            row_hashes_inv[col_idx].resize(column_stream.gcount() / sizeof(size_t));
         }
+        ++col_idx;
     }
 
-    curr_row_ = std::move(row_hashes);
+    curr_block_ = std::move(row_hashes_inv);
     return true;
 }
 
-std::vector<size_t> const& HashedColumnStore::RowIterator::GetNext() {
-    return curr_row_;
+std::vector<std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>>> const& HashedColumnStore::RowIterator::GetNextBlock() {
+    return curr_block_;
 }

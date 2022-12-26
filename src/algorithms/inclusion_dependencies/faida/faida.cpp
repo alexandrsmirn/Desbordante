@@ -127,10 +127,10 @@ void Faida::InsertRows(std::vector<int> const& active_tables, Preprocessor const
 
         inclusion_tester_->StartInsertRow(curr_table);
         int row_idx = 0;
-        while (input_iter->HasNext()) {
+        while (input_iter->HasNextBlock()) {
             //auto row = input_iter->GetNext();
             //inclusion_tester_->InsertRow(row, row_idx++);
-            inclusion_tester_->InsertRow(input_iter->GetNext(), row_idx++);
+            inclusion_tester_->InsertRows(input_iter->GetNextBlock(), row_idx++);
         }
         LOG(INFO) << "num rows:\t" << row_idx;
     }
