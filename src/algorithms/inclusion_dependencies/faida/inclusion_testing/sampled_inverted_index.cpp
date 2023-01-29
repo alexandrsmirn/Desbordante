@@ -1,18 +1,5 @@
 #include "sampled_inverted_index.h"
 
-bool SampledInvertedIndex::Update(SimpleCC const& combination, size_t combined_hash) {
-    auto set_iter = inverted_index_.find(combined_hash);
-
-    if (set_iter == inverted_index_.end()) {
-        non_covered_cc_indices_.set(combination.GetIndex());
-        return false;
-    }
-
-    auto& set = set_iter->second;
-    set.insert(combination.GetIndex());
-    return true;
-}
-
 void SampledInvertedIndex::Init(std::vector<size_t> const& sampled_hashes, int max_id) {
     int const bucket_count = 4; //TODO подумать сколько тут сделать
     for (size_t combined_hash : sampled_hashes) {

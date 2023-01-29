@@ -35,7 +35,20 @@ public:
             : max_id_(0) {}
 
     void Init(std::vector<size_t> const& sampled_hashes, int max_id);
-    bool Update(SimpleCC const& combination, size_t hash); //TODO maybe private?
+
+    // inline definition for performance reasons
+    bool Update(SimpleCC const& combination, size_t hash) {
+        auto set_iter = inverted_index_.find(hash);
+
+        if (set_iter == inverted_index_.end()) {
+            non_covered_cc_indices_.set(combination.GetIndex());
+            return false;
+        }
+
+        auto& set = set_iter->second;
+        set.insert(combination.GetIndex());
+        return true;
+    }
 
     bool IsCovered(std::shared_ptr<SimpleCC> const& combination) {
         return !non_covered_cc_indices_.test(combination->GetIndex());
