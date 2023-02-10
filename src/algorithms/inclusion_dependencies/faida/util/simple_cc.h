@@ -31,10 +31,11 @@ public:
 
     bool operator!=(SimpleCC const& other) const { return !(*this == other); }
     bool StartsWith(SimpleCC const& other) const {
-        return std::equal(this->column_indices_.begin(),
-                          this->column_indices_.end() - 1,
-                          other.column_indices_.begin(),
-                          other.column_indices_.end() - 1);
+        return this->table_num_ == other.table_num_
+               && std::equal(this->column_indices_.begin(),
+                              this->column_indices_.end() - 1,
+                              other.column_indices_.begin(),
+                              other.column_indices_.end() - 1);
     }
 
     void SetIndex(int index) { index_ = index; }

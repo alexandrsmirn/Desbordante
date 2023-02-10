@@ -39,7 +39,10 @@ void HashedColumnStore::WriteColumnsAndSample(model::IDatasetStream& data_stream
     int row_counter = 0;
     while (data_stream.HasNextRow()) {
         std::vector<std::string> row = data_stream.GetNextRow();
-        if (row.empty()) { continue; }
+        if (row.empty()
+            || row.size() != schema->GetNumColumns()) {
+            continue;
+        }
 
         bool is_sample_complete = true;
         bool row_has_unseen_value = false;
