@@ -36,6 +36,9 @@ void HashedColumnStore::WriteColumnsAndSample(model::IDatasetStream& data_stream
             schema->GetNumColumns(),
             std::unordered_set<size_t>(kSampleGoal < 0 ? 1000 : kSampleGoal));
 
+    int const bufsize = 65536;
+    std::vector<std::vector<size_t>> buf(schema->GetNumColumns(), std::vector<size_t>(bufsize));
+
     int row_counter = 0;
     while (data_stream.HasNextRow()) {
         std::vector<std::string> row = data_stream.GetNextRow();
@@ -52,7 +55,12 @@ void HashedColumnStore::WriteColumnsAndSample(model::IDatasetStream& data_stream
             size_t value_hash = this->hash(value);
 
             // TODO подумать над буферизацией. Мб заменить на буффер, и писать sizeof(size_t)*buf_size
-            column_files_out[col_idx].write(reinterpret_cast<char*>(&value_hash), sizeof(value_hash));
+            //column_files_out[col_idx].write(reinterpret_cast<char*>(&value_hash), sizeof(value_hash));
+            buf[col_idx][row_counter % bufsize] = value_hash;
+            if (row_counter % bufsize == bufsize - 1) {
+                column_files_out[col_idx].write(reinterpret_cast<char*>(buf[col_idx].data()),
+                                                bufsize * sizeof(size_t));
+            }
 
             if (row_counter == 0) {
                 // assume all columns are constant initially
@@ -85,6 +93,12 @@ void HashedColumnStore::WriteColumnsAndSample(model::IDatasetStream& data_stream
             break;
         }
     }
+
+    for (int col_idx = 0; col_idx < schema->GetNumColumns(); col_idx++) {
+        column_files_out[col_idx].write(reinterpret_cast<char*>(buf[col_idx].data()),
+                                        (row_counter % bufsize) * sizeof(size_t));
+    }
+
     WriteSample(rows_to_sample);
 
     for (unsigned col_idx = 0; col_idx < constant_col_hashes.size(); col_idx++) {
@@ -138,7 +152,8 @@ HashedColumnStore::RowIterator::~RowIterator() {
 bool HashedColumnStore::RowIterator::HasNextBlock() {
     if (!has_next_) return false;
 
-    int const bufsize = 1024;
+    int const bufsize = 65536;
+    //int const bufsize = 1024;
     std::vector<std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>>>
             row_hashes_inv(hashed_col_streams_.size(),
                            std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>>(bufsize));
