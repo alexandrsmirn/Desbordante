@@ -131,6 +131,18 @@ std::unique_ptr<IRowIterator> HashedColumnStore::GetRows(Vertical const& columns
     }
 
     //TODO check cast
+    //return std::make_unique<RowIterator>(std::move(hashed_col_streams));
+}
+
+std::unique_ptr<IRowIterator> HashedColumnStore::GetRows(std::unordered_set<int> const& columns) const {
+    std::vector<std::optional<std::ifstream>> hashed_col_streams(schema->GetNumColumns());
+
+    //unsigned stream_idx = 0;
+    for (unsigned col_idx : columns) {
+        hashed_col_streams[col_idx] = std::ifstream(column_files_[col_idx], std::ios::binary);
+    }
+
+    //TODO check cast
     return std::make_unique<RowIterator>(std::move(hashed_col_streams));
 }
 
@@ -149,7 +161,9 @@ std::unique_ptr<AbstractColumnStore> HashedColumnStore::CreateFrom(
 
 HashedColumnStore::RowIterator::~RowIterator() {
     for (auto & column_stream : hashed_col_streams_) {
-        column_stream.close();
+        if (column_stream.has_value()) {
+            column_stream->close();
+        }
     }
 }
 
@@ -158,20 +172,23 @@ bool HashedColumnStore::RowIterator::HasNextBlock() {
 
     int const bufsize = 65536;
     //int const bufsize = 1024;
-    std::vector<std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>>>
-            row_hashes_inv(hashed_col_streams_.size(),
-                           std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>>(bufsize));
+    block_size_ = bufsize;
+    Block row_hashes_inv(hashed_col_streams_.size());
 
     /*TODO подумать над буферизацией и распараллеливанием. соотвественно поменяется
      * метод has_next */
     unsigned col_idx = 0;
     //bool last_block = false;
     for (auto& column_stream : hashed_col_streams_) {
-        // read the value if there is not eof or any error
-        if (!column_stream.read(reinterpret_cast<char*>(row_hashes_inv[col_idx].data()),
-                                bufsize * sizeof(size_t))) {
-            has_next_ = false;
-            row_hashes_inv[col_idx].resize(column_stream.gcount() / sizeof(size_t));
+        if (column_stream.has_value()) {
+            row_hashes_inv[col_idx] = AlignedVector(bufsize);
+            // read the value if there is not eof or any error
+            if (!column_stream->read(reinterpret_cast<char*>(row_hashes_inv[col_idx]->data()),
+                                    bufsize * sizeof(size_t))) {
+                has_next_ = false;
+                block_size_ = column_stream->gcount() / sizeof(size_t);
+                row_hashes_inv[col_idx]->resize(block_size_);
+            }
         }
         ++col_idx;
     }
@@ -180,6 +197,6 @@ bool HashedColumnStore::RowIterator::HasNextBlock() {
     return true;
 }
 
-std::vector<std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>>> const& HashedColumnStore::RowIterator::GetNextBlock() {
+IRowIterator::Block const& HashedColumnStore::RowIterator::GetNextBlock() {
     return curr_block_;
 }

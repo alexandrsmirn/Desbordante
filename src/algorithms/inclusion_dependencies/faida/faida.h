@@ -20,7 +20,7 @@ private:
     std::vector<SimpleIND> result_;
 
     // Insert rows into InclusionTester
-    void InsertRows(std::vector<int> const& active_tables, Preprocessor const& data);
+    void InsertRows(std::map<int, std::unordered_set<int>> const& active_tables, Preprocessor const& data);
     std::vector<SimpleIND> TestCandidates(std::vector<SimpleIND> const& candidates);
 
 public:

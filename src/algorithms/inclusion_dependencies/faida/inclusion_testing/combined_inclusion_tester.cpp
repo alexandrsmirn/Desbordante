@@ -4,12 +4,15 @@
 
 #include "inclusion_dependencies/faida/hashing/hashing.h"
 
-std::vector<int> CombinedInclusionTester::SetCCs(std::vector<std::shared_ptr<SimpleCC>>& combinations) {
+std::map<int, std::unordered_set<int>> CombinedInclusionTester::SetCCs(std::vector<std::shared_ptr<SimpleCC>>& combinations) {
     hlls_by_table_.clear();
-    std::set<int> active_tables_set;
+    std::map<int, std::unordered_set<int>> active_tables_set;
     int index = 0;
     for (auto const& cc : combinations) {
-        active_tables_set.insert(cc->GetTableNum());
+        //active_tables_set.insert(cc->GetTableNum());
+        for (int col : cc->GetColumnIndices()) {
+            active_tables_set[cc->GetTableNum()].insert(col);
+        }
 
         /*
         // тут попробовать мувать СС
@@ -22,6 +25,7 @@ std::vector<int> CombinedInclusionTester::SetCCs(std::vector<std::shared_ptr<Sim
         // можно попробовать как-то оптимизировать на основе этого наблюдения
 
         //TODO так делаю потому что не уверен что в combinations все cc униклаьны. воозможно я ошибаюсь
+        // они на самом деле уникальны т.к. достаются из хеш таботцы по фактту
         auto& hlls_by_cc = hlls_by_table_[cc->GetTableNum()];
         if (hlls_by_cc.find(cc) == hlls_by_cc.end()) {
             cc->SetIndex(index++);
@@ -32,7 +36,7 @@ std::vector<int> CombinedInclusionTester::SetCCs(std::vector<std::shared_ptr<Sim
     //TODO мысли. этот метот вызывается один раз в основном цикле, то есть кажется все СС распол
     // заются отсюда, и возможно илх имеет смысл смувить в hlls_by_table?
 
-    return std::vector<int>(active_tables_set.begin(), active_tables_set.end());
+    return active_tables_set;
 }
 
 void CombinedInclusionTester::Initialize(
@@ -77,22 +81,22 @@ void CombinedInclusionTester::Initialize(
     sampled_inverted_index_.Init(samples, max_id_);
 }
 
-void CombinedInclusionTester::InsertRows(std::vector<std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>>> const& hashed_cols, int row_idx) {
+void CombinedInclusionTester::InsertRows(IRowIterator::Block const& hashed_cols, size_t block_size, int row_idx) {
     //TODO константность???
     auto& hll_by_cc = hlls_by_table_[curr_table_num_];
-    unsigned int const chunk_size = hashed_cols[0].size();
+    unsigned int const chunk_size = block_size;
     //std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>> combined_hashes(chunk_size, 0);
     //std::vector<char> nul_combs(chunk_size, 0);
 
     //TODO в метаноме массив hlls_by_table_!!! возможно это имеет смысл на самом деле, потоиму что
     // метод вызывается для каждой строки таблицы
     for (auto& [cc, hll_data] : hll_by_cc) {
-        std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>> combined_hashes(chunk_size, 0);
+        IRowIterator::AlignedVector combined_hashes(chunk_size, 0);
         std::vector<unsigned char> nul_combs(chunk_size, 0);
         auto const nullhashes = _mm256_set1_epi64x(Preprocessor::GetNullHash());
 
         for (int const col_idx : cc->GetColumnIndices()) {
-            auto const& col_hashes_chunk = hashed_cols[col_idx];
+            auto const& col_hashes_chunk = hashed_cols[col_idx].value();
 
             for (unsigned int row_offset = 0; row_offset < chunk_size - chunk_size % 4; row_offset += 4) {
                 auto const hashes = _mm256_load_si256((__m256i*) (&col_hashes_chunk[row_offset]));
@@ -152,10 +156,11 @@ void CombinedInclusionTester::StartInsertRow(int table_num) {
 
 bool CombinedInclusionTester::IsIncludedIn(std::shared_ptr<SimpleCC> const& dep, std::shared_ptr<SimpleCC> const& ref) {
     //TODO возможно вставка null-ов где-то выше в метантме нужна именно тут
-    if (hlls_by_table_[ref->GetTableNum()].find(ref) == hlls_by_table_[ref->GetTableNum()].end()
-        || hlls_by_table_[dep->GetTableNum()].find(dep) == hlls_by_table_[dep->GetTableNum()].end()) {
-        //TODO assert
-    }
+    //if (hlls_by_table_[ref->GetTableNum()].find(ref) == hlls_by_table_[ref->GetTableNum()].end()
+    //    || hlls_by_table_[dep->GetTableNum()].find(dep) == hlls_by_table_[dep->GetTableNum()].end()) {
+    //    //TODO assert
+    //    assert(1 > 1);
+    //}
 
     bool is_dep_covered = sampled_inverted_index_.IsCovered(dep);
     bool is_ref_covered = sampled_inverted_index_.IsCovered(ref);

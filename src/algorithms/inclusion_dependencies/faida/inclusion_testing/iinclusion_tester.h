@@ -1,8 +1,12 @@
 #pragma once
 
 #include <memory>
+#include <unordered_set>
+#include <map>
 
 #include "boost/align/aligned_allocator.hpp"
+
+#include "../preprocessing/irow_iterator.h"
 
 #include "../util/simple_cc.h"
 
@@ -12,10 +16,10 @@ public:
     // вообще можно и мувать, потому что эти комбинации только один раз туда передаются!
     // как раз можно подумать над их аллокацией.
     // !!!почеиу не конст ссылка -- внутри проставляем им id-шники. можно ли это сделать раньше?
-    virtual std::vector<int> SetCCs(std::vector<std::shared_ptr<SimpleCC>>& combinations) = 0;
+    virtual std::map<int, std::unordered_set<int>> SetCCs(std::vector<std::shared_ptr<SimpleCC>>& combinations) = 0;
 
     virtual void StartInsertRow(int table_num) = 0;
-    virtual void InsertRows(std::vector<std::vector<std::size_t, boost::alignment::aligned_allocator<size_t, 32>>> const& hashed_rows, int row_idx) = 0;
+    virtual void InsertRows(IRowIterator::Block const& hashed_rows, size_t block_size, int row_idx) = 0;
 
     //TODO видимо имеют пустую по дефолту реализацию в метаноме
     virtual void FinalizeInsertion() = 0;

@@ -63,6 +63,7 @@ public:
     RelationalSchema const* GetSchema() const { return schema.get(); }
     std::vector<std::vector<size_t>> GetSample() const { return ReadSample(); }
 
+    virtual std::unique_ptr<IRowIterator> GetRows(std::unordered_set<int> const& columns) const = 0;
     virtual std::unique_ptr<IRowIterator> GetRows(Vertical const& columns) const = 0;
     virtual std::unique_ptr<IRowIterator> GetRows() const {
         //todo покраасивее?

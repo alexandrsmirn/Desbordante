@@ -3,22 +3,25 @@
 #include "abstract_column_store.h"
 
 class HashedColumnStore : public AbstractColumnStore {
+    //using Block = IRowIterator::Block;
 private:
     class RowIterator : public IRowIterator {
     private:
-        std::vector<std::ifstream> hashed_col_streams_;
-        std::vector<std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>>> curr_block_;
+        std::vector<std::optional<std::ifstream>> hashed_col_streams_;
+        Block curr_block_;
+        size_t block_size_;
         bool has_next_;
 
         //void GetNextIfHas();
     public:
         //TODO описать методы по умолчанию
-        explicit RowIterator(std::vector<std::ifstream> && hashed_columns)
-            : hashed_col_streams_(std::move(hashed_columns)), has_next_(true) {}
+        explicit RowIterator(std::vector<std::optional<std::ifstream>> && hashed_columns)
+            : hashed_col_streams_(std::move(hashed_columns)), block_size_(0), has_next_(true) {}
         ~RowIterator() override;
 
         bool HasNextBlock() override;
-        std::vector<std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>>> const& GetNextBlock() override;
+        size_t GetBlockSize() const override { return block_size_; }
+        Block const& GetNextBlock() override;
     };
 
 
@@ -36,6 +39,7 @@ public:
     HashedColumnStore(HashedColumnStore && other) = default;
 
     std::unique_ptr<IRowIterator> GetRows(Vertical const& columns) const override;
+    std::unique_ptr<IRowIterator> GetRows(std::unordered_set<int> const& columns) const override;
     static std::unique_ptr<AbstractColumnStore> CreateFrom(std::string const& dataset_name,
                                                            int table_num,
                                                            model::IDatasetStream& data_stream,

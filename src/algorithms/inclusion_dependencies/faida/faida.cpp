@@ -83,6 +83,7 @@ unsigned long long Faida::Execute() {
     InsertRows(active_tables, *data);
 
     std::vector<SimpleIND> last_result = TestCandidates(candidates);
+    LOG(INFO) << "Found\t" << last_result.size() << " INDs on this level";
     count += last_result.size();
     if (kDetectNary) {
         while (!last_result.empty()) {
@@ -117,7 +118,7 @@ unsigned long long Faida::Execute() {
     return millis;
 }
 
-void Faida::InsertRows(std::vector<int> const& active_tables, Preprocessor const& data) {
+void Faida::InsertRows(std::map<int, std::unordered_set<int>> const& active_tables, Preprocessor const& data) {
     using std::vector;
     auto start_time = std::chrono::system_clock::now();
     // std::vector<std::vector<std::vector<size_t>>> samples;
@@ -129,17 +130,19 @@ void Faida::InsertRows(std::vector<int> const& active_tables, Preprocessor const
     }
     inclusion_tester_->Initialize(samples);
 
-    for (int curr_table : active_tables) {
-        // TODO: We always read all columns, even if we don't need to.
+    for (auto const& [curr_table, columns] : active_tables) {
         AbstractColumnStore const* const table_store = data.GetStores()[curr_table].get();
-        auto input_iter = table_store->GetRows();
+        auto input_iter = table_store->GetRows(columns);
 
         inclusion_tester_->StartInsertRow(curr_table);
-        int row_idx = 0;
+        size_t row_idx = 0;
         while (input_iter->HasNextBlock()) {
             //auto row = input_iter->GetNext();
             //inclusion_tester_->InsertRow(row, row_idx++);
-            inclusion_tester_->InsertRows(input_iter->GetNextBlock(), row_idx++);
+            auto const& next_block = input_iter->GetNextBlock();
+            size_t const block_size = input_iter->GetBlockSize();
+            inclusion_tester_->InsertRows(next_block, block_size, row_idx);
+            row_idx += block_size;
         }
         LOG(INFO) << "num rows:\t" << row_idx;
     }
