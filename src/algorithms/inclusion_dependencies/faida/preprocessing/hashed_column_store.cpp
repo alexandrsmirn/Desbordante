@@ -1,6 +1,7 @@
 #include "column.h"
 #include "hashed_column_store.h"
 #include "vertical.h"
+#include "easylogging++.h"
 
 std::filesystem::path HashedColumnStore::PrepareDirNext(std::filesystem::path dir,
                                                         int table_id) {
@@ -40,10 +41,13 @@ void HashedColumnStore::WriteColumnsAndSample(model::IDatasetStream& data_stream
     std::vector<std::vector<size_t>> buf(schema->GetNumColumns(), std::vector<size_t>(bufsize));
 
     int row_counter = 0;
+    //int skipped_rows = 0;
     while (data_stream.HasNextRow()) {
         std::vector<std::string> row = data_stream.GetNextRow();
         if (row.empty()
             || row.size() != schema->GetNumColumns()) {
+            //LOG(INFO) << "skip row";
+            //skipped_rows++;
             continue;
         }
 
@@ -111,7 +115,7 @@ void HashedColumnStore::WriteColumnsAndSample(model::IDatasetStream& data_stream
             }
         }
     }
-
+    //LOG(INFO) << schema->GetName() << " skipped_rows: " << skipped_rows;
     for (auto& col_file : column_files_out) {
         col_file.close();
     }

@@ -23,7 +23,8 @@ private:
     // TODO it seems inv_index is filled only once in Init()
     //std::unordered_map<size_t, std::unordered_set<int>> inverted_index_;
     emhash7::HashMap<size_t, emhash2::HashSet<int>> inverted_index_;
-    std::unordered_set<SimpleIND> discovered_inds_;
+    //std::unordered_set<SimpleIND> discovered_inds_;
+    emhash2::HashSet<SimpleIND> discovered_inds_;
 
     boost::dynamic_bitset<> seen_cc_indices_; //TODO название???
     boost::dynamic_bitset<> non_covered_cc_indices_;

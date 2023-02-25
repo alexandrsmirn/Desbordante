@@ -57,6 +57,7 @@ std::vector<std::shared_ptr<SimpleCC>> Faida::ExtractCCs(std::vector<SimpleIND>&
         combinations.insert(ind_candidate.right());
     }
     //TODO может тут сразу сет возвращать?
+    LOG(INFO) << "Extracted\t" << combinations.size() << " CCs";
     return std::vector<std::shared_ptr<SimpleCC>>(combinations.begin(), combinations.end());
 }
 
@@ -67,12 +68,16 @@ unsigned long long Faida::Execute() {
     // TODO может выделить на стеке??
     std::unique_ptr<Preprocessor> data =
             Preprocessor::CreateHashedStores(config_.dataset_name, data_streams_, kSampleGoal);
+    auto const prep_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now() - start_time);
+    size_t const prepr_time = prep_milliseconds.count();
+    LOG(INFO) << "Preprocessing: \t" << prepr_time;
 
     std::vector<std::shared_ptr<SimpleCC>> combinations = CreateUnaryCCs(*data);
     // TODO вот тут стоит подумать, как аллоцируем комбинации и зависимости.
     //  делаем ли указатели??
     std::vector<SimpleIND> candidates = CreateUnaryINDCandidates(combinations);
-    LOG(INFO) << "candidates:\t" << candidates.size();
+    LOG(INFO) << "Created\t" << candidates.size() << " candidates";
 
     auto active_tables = inclusion_tester_->SetCCs(combinations);
     InsertRows(active_tables, *data);
@@ -86,23 +91,27 @@ unsigned long long Faida::Execute() {
             if (candidates.empty()) {
                 break;
             }
-            LOG(INFO) << "candidates:\t" << candidates.size();
+            LOG(INFO) << "Created\t" << candidates.size() << " candidates";
             combinations = ExtractCCs(candidates); //TODO может возвращать хеш таблицу?
             active_tables = inclusion_tester_->SetCCs(combinations);
             InsertRows(active_tables, *data);
 
             last_result = TestCandidates(candidates);
+            LOG(INFO) << "Found\t" << last_result.size() << " INDs on this level";
             count += last_result.size();
         }
     }
 
-    auto elapsed_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+    auto const elapsed_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::system_clock::now() - start_time);
     long long millis = elapsed_milliseconds.count();
 
     LOG(INFO) << "\nсertain:\t" << inclusion_tester_->GetNumCertainChecks();
     LOG(INFO) << "uncertain:\t" << inclusion_tester_->GetNumUncertainChecks();
     LOG(INFO) << "time:\t" << millis;
+    LOG(INFO) << "\tPreprocessong:\t" << prepr_time;
+    LOG(INFO) << "\tInserting:\t" << insert_time_;
+    LOG(INFO) << "\tChecking:\t" << check_time_;
     LOG(INFO) << "ind count:\t" << count;
 
     return millis;
@@ -135,13 +144,17 @@ void Faida::InsertRows(std::vector<int> const& active_tables, Preprocessor const
         LOG(INFO) << "num rows:\t" << row_idx;
     }
 
+    LOG(INFO) << "Start finalize insertion";
     inclusion_tester_->FinalizeInsertion();
     auto elapsed_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::system_clock::now() - start_time);
-    LOG(INFO) << "insert rows time:\t" << elapsed_milliseconds.count();
+    size_t const millis = elapsed_milliseconds.count();
+    insert_time_ += millis;
+    LOG(INFO) << "Insert rows time:\t" << millis;
 }
 
 std::vector<SimpleIND> Faida::TestCandidates(std::vector<SimpleIND> const& candidates) {
+    auto start_time = std::chrono::system_clock::now();
     std::vector<SimpleIND> result;
 
     // unsigned candidate_count = 0;
@@ -152,6 +165,11 @@ std::vector<SimpleIND> Faida::TestCandidates(std::vector<SimpleIND> const& candi
         }
     }
 
+    auto elapsed_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now() - start_time);
+    size_t const millis = elapsed_milliseconds.count();
+    check_time_ += millis;
+    LOG(INFO) << "Candidates check time:\t" << millis;
     return result;
 }
 

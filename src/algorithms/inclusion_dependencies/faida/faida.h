@@ -13,6 +13,8 @@ private:
     int const kSampleGoal;
     double const kHllAccuracy;
     bool const kDetectNary;
+    size_t insert_time_ = 0;
+    size_t check_time_ = 0;
     std::unique_ptr<IInclusionTester> const inclusion_tester_;
 
     std::vector<SimpleIND> result_;

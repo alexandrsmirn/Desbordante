@@ -6,6 +6,8 @@
 #include <utility>
 #include <memory>
 
+#include "../hashing/hashing.h"
+
 class SimpleIND {
 private:
     std::shared_ptr<SimpleCC> const left_;
@@ -53,7 +55,7 @@ public:
 
 
     bool StartsWith(SimpleIND const& other) const {
-        return this->left_->StartsWith(*other.left()) && this->right_->StartsWith(*other.right_);
+        return this->left_->StartsWith(*other.left_) && this->right_->StartsWith(*other.right_);
     }
 
     std::shared_ptr<SimpleCC> const& left() const { return left_; }
@@ -65,11 +67,11 @@ public:
 template<>
 struct std::hash<SimpleIND> {
     size_t operator()(SimpleIND const& ind) const {
-        size_t seed = 1337;
-        //boost::hash_combine(seed, ind.left());
-        //boost::hash_combine(seed, ind.right());
-        seed ^= std::hash<SimpleCC>{}(*ind.left());
-        seed ^= std::hash<SimpleCC>{}(*ind.right());
+        size_t seed = 0;
+        //seed ^= std::hash<SimpleCC>{}(*ind.left());
+        //seed ^= std::hash<SimpleCC>{}(*ind.right());
+        seed ^= reinterpret_cast<size_t>(ind.left().get());
+        seed = hashing::rotl(seed, 1) ^ reinterpret_cast<size_t>(ind.right().get());
         return seed;
     }
 };
@@ -77,7 +79,11 @@ struct std::hash<SimpleIND> {
 template<>
 struct std::hash<SimpleIND const*> {
     size_t operator()(SimpleIND const* ind) const {
-        return std::hash<SimpleIND>{}(*ind);
+        //return std::hash<SimpleIND>{}(*ind);
+        size_t seed = 0;
+        seed ^= std::hash<SimpleCC>{}(*(ind->left()));
+        seed = hashing::rotl(seed, 11) ^ std::hash<SimpleCC>{}(*(ind->right()));
+        return seed;
     }
 };
 
