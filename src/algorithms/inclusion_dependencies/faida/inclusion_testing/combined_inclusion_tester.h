@@ -4,7 +4,7 @@
 #include "iinclusion_tester.h"
 #include "../preprocessing/preprocessor.h"
 #include "sampled_inverted_index.h"
-#include "hash_table8.hpp"
+//#include "hash_table8.hpp"
 
 class CombinedInclusionTester : public IInclusionTester {
 private:
@@ -25,8 +25,8 @@ private:
     }
 
 protected:
-    //std::unordered_map<int, std::unordered_map<std::shared_ptr<SimpleCC>, HLLData>> hlls_by_table_;
-    std::unordered_map<int, emhash8::HashMap<std::shared_ptr<SimpleCC>, HLLData>> hlls_by_table_;
+    std::unordered_map<int, std::unordered_map<std::shared_ptr<SimpleCC>, HLLData>> hlls_by_table_;
+    //std::unordered_map<int, emhash8::HashMap<std::shared_ptr<SimpleCC>, HLLData>> hlls_by_table_;
 
     virtual HLLData CreateApproxDataStructure(SimpleCC const& combination) = 0;
     virtual void InsertRowIntoHLL(SimpleCC const& cc, size_t row_hash, HLLData& data) = 0;

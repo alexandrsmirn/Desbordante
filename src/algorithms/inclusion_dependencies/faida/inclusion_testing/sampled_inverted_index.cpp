@@ -5,8 +5,8 @@
 void SampledInvertedIndex::Init(std::vector<size_t> const& sampled_hashes, int max_id) {
     int const bucket_count = 4; //TODO подумать сколько тут сделать
     for (size_t combined_hash : sampled_hashes) {
-        //inverted_index_.try_emplace(combined_hash, std::unordered_set<int>(bucket_count));
-        inverted_index_.try_emplace(combined_hash, emhash2::HashSet<int>(4));
+        inverted_index_.try_emplace(combined_hash, std::unordered_set<int>(bucket_count));
+        //inverted_index_.try_emplace(combined_hash, emhash2::HashSet<int>(4));
     }
     max_id_ = max_id;
     /*seen_cc_indices_.resize(max_id);
@@ -21,7 +21,7 @@ void SampledInvertedIndex::Init(std::vector<size_t> const& sampled_hashes, int m
 }
 
 void SampledInvertedIndex::FinalizeInsertion(
-        std::unordered_map<int, emhash8::HashMap<std::shared_ptr<SimpleCC>, HLLData>> const& hlls_by_table) {
+        std::unordered_map<int, std::unordered_map<std::shared_ptr<SimpleCC>, HLLData>> const& hlls_by_table) {
     //std::unordered_map<std::shared_ptr<SimpleCC>, std::vector<int>> ref_by_dep_ccs(max_id_ + 1); //TODO ptr hash??? и хз насчет размера
     std::unordered_map<int, std::vector<int>> ref_by_dep_ccs(max_id_ + 1); //TODO ptr hash??? и хз насчет размера
     std::vector<std::shared_ptr<SimpleCC>> column_combinations(max_id_ + 1);
@@ -37,7 +37,7 @@ void SampledInvertedIndex::FinalizeInsertion(
     }
     //LOG(INFO) << "Finalize: init CCs";
 
-    for (auto const& [cc_indices, _, hash] : inverted_index_) {
+    for (auto const& [hash, cc_indices] : inverted_index_) {
         //TODO возмонжо есть коллизии? узнать, зачем такой биндинг
         for (int const dep_cc_index : cc_indices) {
             seen_cc_indices_.set(dep_cc_index);
@@ -87,8 +87,8 @@ void SampledInvertedIndex::FinalizeInsertion(
             //auto qwe = SimpleIND(*lhs, *(column_combinations[rhs]));
             //TODO снова чек копирование
             // emplace?
-            discovered_inds_.insert(SimpleIND(column_combinations[lhs], column_combinations[rhs]));
-            //discovered_inds_.emplace(column_combinations[lhs], column_combinations[rhs]);
+            //discovered_inds_.insert(SimpleIND(column_combinations[lhs], column_combinations[rhs]));
+            discovered_inds_.emplace(column_combinations[lhs], column_combinations[rhs]);
         }
         //size_t qwe = discovered_inds_.size();
         //if (qwe - size > 500000) {
