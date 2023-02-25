@@ -77,71 +77,32 @@ void CombinedInclusionTester::Initialize(
     sampled_inverted_index_.Init(samples, max_id_);
 }
 
-void CombinedInclusionTester::InsertRows(std::vector<std::vector<size_t>> const& hashed_cols, int row_idx) {
+void CombinedInclusionTester::InsertRow(std::vector<size_t> const& value_hashes, int row_idx) {
     //TODO константность???
     auto& hll_by_cc = hlls_by_table_[curr_table_num_];
-    unsigned int const chunk_size = hashed_cols[0].size();
-    //std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>> combined_hashes(chunk_size, 0);
-    //std::vector<char> nul_combs(chunk_size, 0);
 
     //TODO в метаноме массив hlls_by_table_!!! возможно это имеет смысл на самом деле, потоиму что
     // метод вызывается для каждой строки таблицы
     for (auto& [cc, hll_data] : hll_by_cc) {
-        std::vector<size_t> combined_hashes(chunk_size, 0);
-        std::vector<unsigned char> nul_combs(chunk_size, 0);
-        //auto const nullhashes = _mm256_set1_epi64x(Preprocessor::GetNullHash());
+        size_t combined_hash = 0;
+        bool has_null = false;
 
         for (int const col_idx : cc->GetColumnIndices()) {
-            auto const& col_hashes_chunk = hashed_cols[col_idx];
-
-            /*for (unsigned int row_offset = 0; row_offset < chunk_size - chunk_size % 4; row_offset += 4) {
-                auto const hashes = _mm256_load_si256((__m256i*) (&col_hashes_chunk[row_offset]));
-                auto const comb_hashes = _mm256_load_si256((__m256i*) (&combined_hashes[row_offset]));
-
-                auto const cmp_res = _mm256_cmpeq_epi64(hashes, nullhashes);
-                unsigned int const cmpResultMask = _mm256_movemask_epi8(cmp_res); //имеем 4 байта. ff, равен нулл хешу
-                (unsigned int&) *(&nul_combs[row_offset]) |= cmpResultMask;
-
-                auto const qwe1 = _mm256_slli_epi64(comb_hashes, 1);
-                auto const qwe2 = _mm256_srli_epi64(comb_hashes, 63);
-                auto const rotated_hashes = _mm256_or_si256(qwe1, qwe2);
-                auto const xored = _mm256_xor_si256(rotated_hashes, hashes);
-
-                _mm256_store_si256((__m256i*) (&combined_hashes[row_offset]), xored);
+            size_t const value_hash = value_hashes[col_idx];
+            if (value_hash == Preprocessor::GetNullHash()) {
+                has_null = true;
+                break;
             }
-
-            for (unsigned int row_offset = chunk_size - chunk_size % 4; row_offset < chunk_size; row_offset++) {
-                auto const hash = col_hashes_chunk[row_offset];
-                auto const comb_hash = combined_hashes[row_offset];
-
-                unsigned char const cmp_res = hash == Preprocessor::GetNullHash() ? 0xFF : 0;
-                nul_combs[row_offset] |= cmp_res;
-
-                auto const combined_hash = hashing::rotl(comb_hash, 1) ^ hash;
-                combined_hashes[row_offset] = combined_hash;
-            }*/
-
-            for (unsigned int row_offset = 0; row_offset < chunk_size; row_offset++) {
-                auto const hash = col_hashes_chunk[row_offset];
-                auto const comb_hash = combined_hashes[row_offset];
-
-                unsigned char const cmp_res = hash == Preprocessor::GetNullHash() ? 0xFF : 0;
-                nul_combs[row_offset] |= cmp_res;
-
-                auto const combined_hash = hashing::rotl(comb_hash, 1) ^ hash;
-                combined_hashes[row_offset] = combined_hash;
-            }
+            combined_hash = hashing::rotl(combined_hash, 1) ^ value_hash;
         }
 
-        for (int i = 0; i < chunk_size; i++) {
-            size_t const combined_hash = combined_hashes[i];
-            bool const has_null = nul_combs[i];
-            if (!has_null) {
-                if (!sampled_inverted_index_.Update(*cc, combined_hash)) {  // row not found in inverted index (cc is not covered)
-                    // so we insert cc into hll if row does not contain null value and is not covered by inv_index
-                    InsertRowIntoHLL(*cc, combined_hash, hll_data);
-                }
-            }
+        // TODO column combination contains null value, so we do not insert this cc into hll??
+        if (has_null) { continue; }
+
+        //row not found in inverted index (cc is not covered)
+        if (!sampled_inverted_index_.Update(*cc, combined_hash)) {
+            // so we insert cc into hll if row does not contain null value and is not covered by inv_index
+            InsertRowIntoHLL(*cc, combined_hash, hll_data);
         }
     }
 }
