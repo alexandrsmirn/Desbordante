@@ -77,7 +77,7 @@ void CombinedInclusionTester::Initialize(
     sampled_inverted_index_.Init(samples, max_id_);
 }
 
-void CombinedInclusionTester::InsertRows(std::vector<std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>>> const& hashed_cols, int row_idx) {
+void CombinedInclusionTester::InsertRows(std::vector<std::vector<size_t>> const& hashed_cols, int row_idx) {
     //TODO константность???
     auto& hll_by_cc = hlls_by_table_[curr_table_num_];
     unsigned int const chunk_size = hashed_cols[0].size();
@@ -87,14 +87,14 @@ void CombinedInclusionTester::InsertRows(std::vector<std::vector<size_t, boost::
     //TODO в метаноме массив hlls_by_table_!!! возможно это имеет смысл на самом деле, потоиму что
     // метод вызывается для каждой строки таблицы
     for (auto& [cc, hll_data] : hll_by_cc) {
-        std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>> combined_hashes(chunk_size, 0);
+        std::vector<size_t> combined_hashes(chunk_size, 0);
         std::vector<unsigned char> nul_combs(chunk_size, 0);
-        auto const nullhashes = _mm256_set1_epi64x(Preprocessor::GetNullHash());
+        //auto const nullhashes = _mm256_set1_epi64x(Preprocessor::GetNullHash());
 
         for (int const col_idx : cc->GetColumnIndices()) {
             auto const& col_hashes_chunk = hashed_cols[col_idx];
 
-            for (unsigned int row_offset = 0; row_offset < chunk_size - chunk_size % 4; row_offset += 4) {
+            /*for (unsigned int row_offset = 0; row_offset < chunk_size - chunk_size % 4; row_offset += 4) {
                 auto const hashes = _mm256_load_si256((__m256i*) (&col_hashes_chunk[row_offset]));
                 auto const comb_hashes = _mm256_load_si256((__m256i*) (&combined_hashes[row_offset]));
 
@@ -119,9 +119,9 @@ void CombinedInclusionTester::InsertRows(std::vector<std::vector<size_t, boost::
 
                 auto const combined_hash = hashing::rotl(comb_hash, 1) ^ hash;
                 combined_hashes[row_offset] = combined_hash;
-            }
+            }*/
 
-            /*for (unsigned int row_offset = 0; row_offset < chunk_size; row_offset++) {
+            for (unsigned int row_offset = 0; row_offset < chunk_size; row_offset++) {
                 auto const hash = col_hashes_chunk[row_offset];
                 auto const comb_hash = combined_hashes[row_offset];
 
@@ -130,7 +130,7 @@ void CombinedInclusionTester::InsertRows(std::vector<std::vector<size_t, boost::
 
                 auto const combined_hash = hashing::rotl(comb_hash, 1) ^ hash;
                 combined_hashes[row_offset] = combined_hash;
-            }*/
+            }
         }
 
         for (int i = 0; i < chunk_size; i++) {

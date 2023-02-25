@@ -7,7 +7,7 @@ private:
     class RowIterator : public IRowIterator {
     private:
         std::vector<std::ifstream> hashed_col_streams_;
-        std::vector<std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>>> curr_block_;
+        std::vector<std::vector<size_t>> curr_block_;
         bool has_next_;
 
         //void GetNextIfHas();
@@ -18,7 +18,7 @@ private:
         ~RowIterator() override;
 
         bool HasNextBlock() override;
-        std::vector<std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>>> const& GetNextBlock() override;
+        std::vector<std::vector<size_t>> const& GetNextBlock() override;
     };
 
 

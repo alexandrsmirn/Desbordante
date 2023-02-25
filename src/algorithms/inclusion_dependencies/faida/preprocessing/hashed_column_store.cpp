@@ -158,9 +158,9 @@ bool HashedColumnStore::RowIterator::HasNextBlock() {
 
     int const bufsize = 65536;
     //int const bufsize = 1024;
-    std::vector<std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>>>
+    std::vector<std::vector<size_t>>
             row_hashes_inv(hashed_col_streams_.size(),
-                           std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>>(bufsize));
+                           std::vector<size_t>(bufsize));
 
     /*TODO подумать над буферизацией и распараллеливанием. соотвественно поменяется
      * метод has_next */
@@ -180,6 +180,6 @@ bool HashedColumnStore::RowIterator::HasNextBlock() {
     return true;
 }
 
-std::vector<std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>>> const& HashedColumnStore::RowIterator::GetNextBlock() {
+std::vector<std::vector<size_t>> const& HashedColumnStore::RowIterator::GetNextBlock() {
     return curr_block_;
 }

@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "boost/align/aligned_allocator.hpp"
+//#include "boost/align/aligned_allocator.hpp"
 
 #include "../util/simple_cc.h"
 
@@ -15,7 +15,7 @@ public:
     virtual std::vector<int> SetCCs(std::vector<std::shared_ptr<SimpleCC>>& combinations) = 0;
 
     virtual void StartInsertRow(int table_num) = 0;
-    virtual void InsertRows(std::vector<std::vector<std::size_t, boost::alignment::aligned_allocator<size_t, 32>>> const& hashed_rows, int row_idx) = 0;
+    virtual void InsertRows(std::vector<std::vector<std::size_t>> const& hashed_rows, int row_idx) = 0;
 
     //TODO видимо имеют пустую по дефолту реализацию в метаноме
     virtual void FinalizeInsertion() = 0;

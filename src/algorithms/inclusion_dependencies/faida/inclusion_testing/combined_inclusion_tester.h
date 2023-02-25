@@ -42,7 +42,7 @@ public:
     void Initialize(std::vector<std::vector<std::vector<size_t>>> const& table_samples) override;
 
     void StartInsertRow(int table_num) override;
-    void InsertRows(std::vector<std::vector<size_t, boost::alignment::aligned_allocator<size_t, 32>>> const& values, int row_idx) override;
+    void InsertRows(std::vector<std::vector<size_t>> const& values, int row_idx) override;
 
     bool IsIncludedIn(std::shared_ptr<SimpleCC> const& dep, std::shared_ptr<SimpleCC> const& ref) override;
 
