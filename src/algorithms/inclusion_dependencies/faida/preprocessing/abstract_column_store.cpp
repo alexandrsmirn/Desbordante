@@ -27,10 +27,10 @@ void AbstractColumnStore::LoadData(std::string const& dataset_name,
 std::filesystem::path AbstractColumnStore::PrepareDir(std::string const& dataset_name,
                                                       int table_num) {
     namespace fs = std::filesystem;
-    //fs::path sample_location_dir = fs::current_path() / kDirName / dataset_name / schema->GetName();
+    fs::path sample_location_dir = fs::current_path() / kDirName / dataset_name / schema->GetName();
     //fs::path sample_location_dir = fs::temp_directory_path() / kDirName / dataset_name / schema->GetName();
     //fs::path sample_location_dir = fs::path("/run/media/alex/640GB/datasets/tmp") / kDirName / dataset_name / schema->GetName();
-    fs::path sample_location_dir = fs::path("/run/media/alex/SSD_WIN/temp") / kDirName / dataset_name / schema->GetName();
+    //fs::path sample_location_dir = fs::path("/run/media/alex/SSD_WIN/temp") / kDirName / dataset_name / schema->GetName();
 
     //TODO обработать исключени?
     fs::create_directories(sample_location_dir);
