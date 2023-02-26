@@ -15,6 +15,8 @@
 #include "algo_factory.h"
 #include "program_option_strings.h"
 
+#include "algorithms/inclusion_dependencies/faida/faida.h"
+
 namespace po = boost::program_options;
 namespace posr = program_option_strings;
 
@@ -81,7 +83,71 @@ static bool CheckOptions(std::string const& task, std::string const& alg, std::s
     return true;
 }
 
+std::unique_ptr<algos::Faida> CreateFaidaInstance(int sample_goal,
+                                                         double hll_accuracy,
+                                                         std::filesystem::path const& path,
+                                                         char separator = ',',
+                                                         bool has_header = true) {
+    std::vector<std::filesystem::path> files;
+    if (std::filesystem::is_directory(path)) {
+        for (auto const& file : std::filesystem::directory_iterator(path)) {
+            files.push_back(file);
+        }
+    } else {
+        files = std::vector(1, path);
+    }
+
+    algos::INDAlgorithm::Config conf{
+            .dataset_name = path.filename(),
+            //.data = std::vector(1, path),
+            .data = std::move(files),
+            .separator = separator,
+            .has_header = has_header,
+            .special_params {
+                    {"sample_goal", sample_goal},
+                    {"hll_accuracy", hll_accuracy},
+                    {"detect_nary", true}}
+    };
+    return std::make_unique<algos::Faida>(conf);
+}
+
 int main(int argc, char const* argv[]) {
+    std::string dataset = "tpc-lnk";
+    int sample_goal = 500;
+    double hll_accuracy = 0.001;
+    char separator = '|';
+    bool has_header = false;
+
+    po::options_description options("Benchmark");
+    options.add_options()
+                    ("data", po::value<string>(&dataset),
+                     "")
+                    ("samp_goal", po::value<int>(&sample_goal),
+                     "")
+                    ("hll_acc", po::value<double>(&hll_accuracy),
+                     "")
+                    ("sep", po::value<char>(&separator),
+                     "")
+                    ("has_header", po::value<bool>(&has_header),
+                     "")
+                    ;
+    el::Loggers::configureFromGlobal("logging.conf");
+    //po::parse_command_line(argc, argv, options);
+    po::variables_map vm;
+    try {
+        po::store(po::parse_command_line(argc, argv, options), vm);
+        po::notify(vm);
+    } catch (po::error &e) {
+        std::cout << e.what() << std::endl;
+        return 0;
+    }
+
+    auto path = std::filesystem::current_path() / "inputData" / dataset;
+    auto algorithm = CreateFaidaInstance(sample_goal, hll_accuracy, path, separator, has_header);
+    algorithm->Execute();
+}
+
+int main2(int argc, char const* argv[]) {
     std::string algo;
     std::string dataset;
     std::string task;

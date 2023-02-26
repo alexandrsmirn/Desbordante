@@ -71,7 +71,7 @@ struct std::hash<SimpleIND> {
         //seed ^= std::hash<SimpleCC>{}(*ind.left());
         //seed ^= std::hash<SimpleCC>{}(*ind.right());
         seed ^= reinterpret_cast<size_t>(ind.left().get());
-        seed = hashing::rotl(seed, 1) ^ reinterpret_cast<size_t>(ind.right().get());
+        seed = hashing::rotl(seed, 11) ^ reinterpret_cast<size_t>(ind.right().get());
         return seed;
     }
 };
