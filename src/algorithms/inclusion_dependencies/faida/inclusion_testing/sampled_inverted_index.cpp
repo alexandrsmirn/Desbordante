@@ -6,8 +6,9 @@ void SampledInvertedIndex::Init(std::vector<size_t> const& sampled_hashes, int m
     int const bucket_count = 4; //TODO подумать сколько тут сделать
     for (size_t combined_hash : sampled_hashes) {
         //inverted_index_.try_emplace(combined_hash, std::unordered_set<int>(bucket_count));
-        inverted_index_.try_emplace(combined_hash, emhash2::HashSet<int>(4));
+        inverted_index_.try_emplace(combined_hash, atomicbitvector::atomic_bv_t(max_id));
     }
+    LOG(INFO) << "Inverted index takes " << inverted_index_.size() * (float)max_id / (8*1024) << " KB";
     max_id_ = max_id;
     /*seen_cc_indices_.resize(max_id);
     seen_cc_indices_.clear();
@@ -15,7 +16,8 @@ void SampledInvertedIndex::Init(std::vector<size_t> const& sampled_hashes, int m
     non_covered_cc_indices_.clear();*/
 
     seen_cc_indices_ = boost::dynamic_bitset<>(max_id);
-    non_covered_cc_indices_ = boost::dynamic_bitset<>(max_id);
+    non_covered_cc_indices_ = atomicbitvector::atomic_bv_t(max_id);
+    //non_covered_cc_indices_ = boost::dynamic_bitset<>(max_id);
 
     discovered_inds_.clear();
 }
@@ -39,35 +41,42 @@ void SampledInvertedIndex::FinalizeInsertion(
 
     for (auto const& [cc_indices, _, hash] : inverted_index_) {
         //TODO возмонжо есть коллизии? узнать, зачем такой биндинг
-        for (int const dep_cc_index : cc_indices) {
-            seen_cc_indices_.set(dep_cc_index);
-            auto ref_ccs_iter = ref_by_dep_ccs.find(dep_cc_index);
+        //for (int const dep_cc_index : cc_indices) {
+        for (int i = 0; i < cc_indices.size(); i++) {
+            if (cc_indices[i]) {
+                int const dep_cc_index = i;
+                seen_cc_indices_.set(dep_cc_index);
+                auto ref_ccs_iter = ref_by_dep_ccs.find(dep_cc_index);
 
-            if (ref_ccs_iter == ref_by_dep_ccs.end()) {
-                // if value is unseen
-                std::vector<int> ref_ccs;
-                ref_ccs.reserve(cc_indices.size() - 1);
-                for (int const ref_cc_index : cc_indices) {
-                    if (dep_cc_index != ref_cc_index) {
-                        ref_ccs.push_back(ref_cc_index);
+                if (ref_ccs_iter == ref_by_dep_ccs.end()) {
+                    // if value is unseen
+                    std::vector<int> ref_ccs;
+                    ref_ccs.reserve(cc_indices.size() - 1);
+                    //for (int const ref_cc_index : cc_indices) {
+                    for (int j = 0; j < cc_indices.size(); j++) {
+                        if (cc_indices[j]) {
+                            int const ref_cc_index = j;
+                            if (dep_cc_index != ref_cc_index) {
+                                ref_ccs.push_back(ref_cc_index);
+                            }
+                        }
                     }
-                }
-                ref_by_dep_ccs[dep_cc_index] = std::move(ref_ccs);
-            } else if (!ref_ccs_iter->second.empty()) {
-                std::vector<int>& ref_ccs = ref_ccs_iter->second;
-                //TODO если сделаем значение у inverted_index как упорядоченный map, то можно
-                // попробовать поработать с упорядоченным ретейном
+                    ref_by_dep_ccs[dep_cc_index] = std::move(ref_ccs);
+                } else if (!ref_ccs_iter->second.empty()) {
+                    std::vector<int>& ref_ccs = ref_ccs_iter->second;
+                    // TODO если сделаем значение у inverted_index как упорядоченный map, то можно
+                    //  попробовать поработать с упорядоченным ретейном
 
-                //resf_ccs.RetainAll(cc_indices);
-                auto const& value_group = cc_indices;
-                ref_ccs.erase(std::remove_if(
-                                  ref_ccs.begin(),
-                                  ref_ccs.end(),
-                                  [&value_group] (int cc_id) {
-                                      return value_group.find(cc_id) == value_group.end();
-                                  }),
-                              ref_ccs.end());
-                //TODO возможно тупо заменить на копирование массива без ненужных элементов?
+                    // resf_ccs.RetainAll(cc_indices);
+                    auto const& value_group = cc_indices;
+                    ref_ccs.erase(std::remove_if(ref_ccs.begin(), ref_ccs.end(),
+                                                 [&value_group](int cc_id) {
+                                                     // return value_group.find(cc_id) == value_group.end();
+                                                     return !value_group.test(cc_id);
+                                                 }),
+                                  ref_ccs.end());
+                    // TODO возможно тупо заменить на копирование массива без ненужных элементов?
+                }
             }
         }
     }

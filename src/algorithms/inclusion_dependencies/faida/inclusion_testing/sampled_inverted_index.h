@@ -3,6 +3,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "../lib/atomicbitvector/include/atomic_bitvector.hpp"
+
 //#include "hash_set4.hpp"
 #include "hash_set2.hpp" // -- наилучший вариант сета
 
@@ -22,18 +24,19 @@ private:
     /* Maps combined hash to the column conbination IDs */
     // TODO it seems inv_index is filled only once in Init()
     //std::unordered_map<size_t, std::unordered_set<int>> inverted_index_;
-    emhash7::HashMap<size_t, emhash2::HashSet<int>> inverted_index_;
+    emhash7::HashMap<size_t, atomicbitvector::atomic_bv_t> inverted_index_;
     //std::unordered_set<SimpleIND> discovered_inds_;
     emhash2::HashSet<SimpleIND> discovered_inds_;
 
     boost::dynamic_bitset<> seen_cc_indices_; //TODO название???
-    boost::dynamic_bitset<> non_covered_cc_indices_;
+    atomicbitvector::atomic_bv_t non_covered_cc_indices_;
+    //boost::dynamic_bitset<> non_covered_cc_indices_;
 
     int max_id_;
 
 public:
     SampledInvertedIndex()
-            : max_id_(0) {}
+            : max_id_(0), non_covered_cc_indices_(0) {}
 
     void Init(std::vector<size_t> const& sampled_hashes, int max_id);
 
@@ -42,12 +45,16 @@ public:
         auto set_iter = inverted_index_.find(hash);
 
         if (set_iter == inverted_index_.end()) {
-            non_covered_cc_indices_.set(combination.GetIndex());
+            if (!non_covered_cc_indices_.test(combination.GetIndex())){
+                non_covered_cc_indices_.set(combination.GetIndex());
+            }
             return false;
         }
 
         auto& set = set_iter->second;
-        set.insert(combination.GetIndex());
+        if (!set.test(combination.GetIndex())) {
+            set.set(combination.GetIndex());
+        }
         return true;
     }
 
