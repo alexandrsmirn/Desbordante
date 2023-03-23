@@ -2,6 +2,8 @@
 
 #include "easylogging++.h"
 
+#include "parallel_for.h"
+
 #include "inclusion_dependencies/faida/hashing/hashing.h"
 
 std::map<int, std::unordered_set<int>> CombinedInclusionTester::SetCCs(std::vector<std::shared_ptr<SimpleCC>>& combinations) {
@@ -90,7 +92,10 @@ void CombinedInclusionTester::InsertRows(IRowIterator::Block const& hashed_cols,
 
     //TODO в метаноме массив hlls_by_table_!!! возможно это имеет смысл на самом деле, потоиму что
     // метод вызывается для каждой строки таблицы
-    for (auto& [cc, hll_data] : hll_by_cc) {
+    //for (auto& [cc, hll_data] : hll_by_cc) {
+    util::parallel_foreach(hll_by_cc.begin(), hll_by_cc.end(), 1, [this, &hashed_cols, chunk_size](auto& elem) {
+        auto& cc = elem.first;
+        auto& hll_data = elem.second;
         IRowIterator::AlignedVector combined_hashes(chunk_size, 0);
         std::vector<unsigned char> nul_combs(chunk_size, 0);
         auto const nullhashes = _mm256_set1_epi64x(Preprocessor::GetNullHash());
@@ -147,7 +152,8 @@ void CombinedInclusionTester::InsertRows(IRowIterator::Block const& hashed_cols,
                 }
             }
         }
-    }
+    });
+    //}
 }
 
 void CombinedInclusionTester::StartInsertRow(int table_num) {

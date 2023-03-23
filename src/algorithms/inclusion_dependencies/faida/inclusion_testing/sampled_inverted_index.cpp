@@ -6,7 +6,7 @@ void SampledInvertedIndex::Init(std::vector<size_t> const& sampled_hashes, int m
     int const bucket_count = 4; //TODO подумать сколько тут сделать
     for (size_t combined_hash : sampled_hashes) {
         //inverted_index_.try_emplace(combined_hash, std::unordered_set<int>(bucket_count));
-        inverted_index_.try_emplace(combined_hash, emhash2::HashSet<int>(4));
+        inverted_index_.try_emplace(combined_hash, std::make_pair(emhash2::HashSet<int>(4), std::make_unique<tas_lock>()));
     }
     max_id_ = max_id;
     /*seen_cc_indices_.resize(max_id);
@@ -15,7 +15,7 @@ void SampledInvertedIndex::Init(std::vector<size_t> const& sampled_hashes, int m
     non_covered_cc_indices_.clear();*/
 
     seen_cc_indices_ = boost::dynamic_bitset<>(max_id);
-    non_covered_cc_indices_ = boost::dynamic_bitset<>(max_id);
+    non_covered_cc_indices_ = atomicbitvector::atomic_bv_t(max_id);
 
     discovered_inds_.clear();
 }
@@ -37,7 +37,8 @@ void SampledInvertedIndex::FinalizeInsertion(
     }
     //LOG(INFO) << "Finalize: init CCs";
 
-    for (auto const& [cc_indices, _, hash] : inverted_index_) {
+    for (auto const& [record, _, hash] : inverted_index_) {
+        auto& cc_indices = record.first;
         //TODO возмонжо есть коллизии? узнать, зачем такой биндинг
         for (int const dep_cc_index : cc_indices) {
             seen_cc_indices_.set(dep_cc_index);
